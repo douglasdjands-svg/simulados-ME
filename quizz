@@ -1,2 +1,102 @@
 # simulados-ME
-quizz
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Quiz Application</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .question { margin-bottom: 20px; }
+        .result { display: none; margin-top: 20px; }
+        button { margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Interactive Quiz Application</h1>
+    <div>
+        <select id="exam-select">
+            <option value="exam1">Exam 1</option>
+            <option value="exam2">Exam 2</option>
+            <option value="exam3">Exam 3</option>
+            <option value="exam4">Exam 4</option>
+        </select>
+        <button id="start-quiz">Start Quiz</button>
+    </div>
+    <div id="quiz-container" style="display: none;">
+        <div class="question" id="question"></div>
+        <div class="options"></div>
+        <button id="next">Next Question</button>
+        <button id="show-results" style="display: none;">Show Results</button>
+    </div>
+    <div class="result" id="result"></div>
+
+    <script>
+        const questions = {
+            "exam1": [
+                { question: "Q1: What is 2 + 2?", options: ["3", "4", "5"], answer: "4" },
+                { question: "Q2: What is the capital of France?", options: ["Berlin", "Madrid", "Paris"], answer: "Paris" }
+            ],
+            "exam2": [
+                { question: "Q1: What is the largest planet?", options: ["Earth", "Jupiter", "Mars"], answer: "Jupiter" }
+            ],
+            "exam3": [
+                { question: "Q1: What is the boiling point of water?", options: ["90°C", "100°C", "110°C"], answer: "100°C" }
+            ],
+            "exam4": [
+                { question: "Q1: What is the fastest land animal?", options: ["Cheetah", "Lion", "Elephant"], answer: "Cheetah" }
+            ]
+        };
+
+        let currentExam; 
+        let currentQuestion = 0;
+        let score = 0;
+
+        document.getElementById('start-quiz').addEventListener('click', function() {
+            currentExam = document.getElementById('exam-select').value;
+            document.getElementById('quiz-container').style.display = 'block';
+            document.getElementById('question').innerText = '';
+            document.getElementById('options').innerHTML = '';
+            currentQuestion = 0;
+            score = 0;
+            showQuestion();
+        });
+
+        document.getElementById('next').addEventListener('click', function() {
+            const selectedOption = document.querySelector('input[name="option"]:checked');
+            if (selectedOption) {
+                if (selectedOption.value === questions[currentExam][currentQuestion].answer) {
+                    score++;
+                }
+                currentQuestion++;
+                if (currentQuestion < questions[currentExam].length) {
+                    showQuestion();
+                } else {
+                    showResults();
+                }
+            } else {
+                alert('Please select an answer.');
+            }
+        });
+
+        function showQuestion() {
+            const questionData = questions[currentExam][currentQuestion];
+            document.getElementById('question').innerText = questionData.question;
+            const optionsDiv = document.getElementById('options');
+            optionsDiv.innerHTML = '';
+            questionData.options.forEach(option => {
+                const optionHTML = `<label><input type='radio' name='option' value='${option}'> ${option}</label>`;
+                optionsDiv.innerHTML += optionHTML;
+            });
+            document.getElementById('show-results').style.display = 'none';
+        }
+
+        function showResults() {
+            document.getElementById('quiz-container').style.display = 'none';
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `You scored ${score} out of ${questions[currentExam].length}`;
+            resultDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
