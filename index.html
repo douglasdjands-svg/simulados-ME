@@ -1,101 +1,666 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Quiz Application</title>
+    <title>Simulado de Inspeção - Douglas</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .question { margin-bottom: 20px; }
-        .result { display: none; margin-top: 20px; }
-        button { margin-top: 10px; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f4f7f6; color: #333; line-height: 1.6; padding: 10px; }
+        .container { max-width: 800px; margin: 20px auto; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .hidden { display: none; }
+        h1 { color: #2c3e50; text-align: center; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .btn-menu { display: block; width: 100%; padding: 15px; margin: 10px 0; background-color: #3498db; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; transition: 0.3s; }
+        .btn-menu:hover { background-color: #2980b9; }
+        .option { background: #f9f9f9; border: 2px solid #eee; padding: 12px; margin: 8px 0; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        .option:hover { background: #eef2f3; border-color: #3498db; }
+        .selected { background: #d6eaf8 !important; border-color: #3498db !important; }
+        .nav-btns { display: flex; justify-content: space-between; margin-top: 25px; }
+        button { padding: 10px 25px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; }
+        .btn-prev { background: #95a5a6; color: white; }
+        .btn-next { background: #27ae60; color: white; }
+        .correct { color: #27ae60; font-weight: bold; }
+        .wrong { color: #e74c3c; font-weight: bold; text-decoration: line-through; }
+        .result-card { border-bottom: 1px solid #ddd; padding: 15px 0; }
     </style>
 </head>
 <body>
-    <h1>Interactive Quiz Application</h1>
-    <div>
-        <select id="exam-select">
-            <option value="exam1">Exam 1</option>
-            <option value="exam2">Exam 2</option>
-            <option value="exam3">Exam 3</option>
-            <option value="exam4">Exam 4</option>
-        </select>
-        <button id="start-quiz">Start Quiz</button>
+
+<div id="menu" class="container">
+    <h1>Simulado de Inspeção (ME)</h1>
+    <button class="btn-menu" onclick="iniciarSimulado('total')">1 - Simulado Completo (Todas)</button>
+    <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; text-align: center;">
+        <label>2 - Escolher Prova: </label>
+        <select id="escolhaProva" style="padding: 8px; border-radius: 4px;">
+            <option value="1">Prova 01</option>
+            <option value="2">Prova 02</option>
+            <option value="3">Prova 03</option>
+            <option value="4">Prova 04</option>
+            <option value="5">Prova 05</option>
+            <option value="6">Prova 06</option>
+            <option value="7">Prova 07</option>
+            <option value="8">Prova 08</option>
+            <option value="9">Prova 09</option>
+            <option value="10">Prova 10</option>
+            <option value="11">Prova 11</option>
+            <option value="12">Prova 12</option>
+            </select>
+        <button class="btn-menu" style="width: auto; display: inline-block; margin-left: 10px; padding: 8px 20px;" onclick="iniciarSimulado('especifica')">Iniciar</button>
     </div>
-    <div id="quiz-container" style="display: none;">
-        <div class="question" id="question"></div>
-        <div class="options"></div>
-        <button id="next">Next Question</button>
-        <button id="show-results" style="display: none;">Show Results</button>
+    <button class="btn-menu" onclick="iniciarSimulado('random')">3 - 40 Questões Aleatórias</button>
+</div>
+
+<div id="quiz" class="container hidden">
+    <div id="progresso" style="font-weight: bold; color: #7f8c8d; margin-bottom: 10px;"></div>
+    <div id="pergunta" style="font-size: 18px; margin-bottom: 20px; font-weight: 500;"></div>
+    <div id="opcoes"></div>
+    <div class="nav-btns">
+        <button class="btn-prev" id="voltar" onclick="mudarQuestao(-1)">Voltar</button>
+        <button class="btn-next" id="avancar" onclick="mudarQuestao(1)">Avançar</button>
+        <button class="btn-next hidden" id="finalizar" onclick="verResultado()">Finalizar Simulado</button>
     </div>
-    <div class="result" id="result"></div>
+</div>
 
-    <script>
-        const questions = {
-            "exam1": [
-                { question: "Q1: What is 2 + 2?", options: ["3", "4", "5"], answer: "4" },
-                { question: "Q2: What is the capital of France?", options: ["Berlin", "Madrid", "Paris"], answer: "Paris" }
-            ],
-            "exam2": [
-                { question: "Q1: What is the largest planet?", options: ["Earth", "Jupiter", "Mars"], answer: "Jupiter" }
-            ],
-            "exam3": [
-                { question: "Q1: What is the boiling point of water?", options: ["90°C", "100°C", "110°C"], answer: "100°C" }
-            ],
-            "exam4": [
-                { question: "Q1: What is the fastest land animal?", options: ["Cheetah", "Lion", "Elephant"], answer: "Cheetah" }
-            ]
-        };
+<div id="resultado" class="container hidden">
+    <h2 id="placar" style="text-align: center;"></h2>
+    <div id="detalhes"></div>
+    <button class="btn-menu" onclick="location.reload()">Reiniciar</button>
+</div>
 
-        let currentExam; 
-        let currentQuestion = 0;
-        let score = 0;
+<script>
+const bancoQuestoes = [ 
+    // PROVA 01 
+    {p:1, q:"1)- O cabo que conecta o aparelho de ultrassom ao cabeçote é especialmente projetado de forma que um condutor seja perfeitamente centrado dentro de outro condutor. O nome tecnicamente correto deste cabo é:", o:["Cabo BX", "Conduite", "Cabo condutor ultrassônico grau 20", "Cabo coaxial"], r:3},
+    {p:1, q:"2)- O processo para comparar um instrumento ou dispositivo com um padrão é denominado:", o:["Angulação", "Atenuação", "Correlação", "Calibração"], r:3},
+    {p:1, q:"3)- As ondas de compressão também são denominadas:", o:["Ondas de Lamb", "Ondas de corte", "Ondas transversais", "Ondas longitudinais"], r:3},
+    {p:1, q:"4)- As ondas de Rayleigh são também denominadas:", o:["Ondas de corte", "Ondas longitudinais", "Ondas transversais", "Ondas de superfície"], r:3},
+    {p:1, q:"5)- O material usado entre a face do cabeçote e a superfície em exame para melhorar a transmissão das ondas ultrassônicas é denominado:", o:["Agente umedecedor", "Transmissor acústico", "lubrificante", "Acoplante"], r:3},
+    {p:1, q:"6)- O material piezelétrico existente num cabeçote, que vibra para produzir ondas sônicas é denominado:", o:["Bloco de apoio", "Cunha de lucite", "Acoplante", "Cristal"], r:3},
+    {p:1, q:"7)- O método de exame por meio de ultrassom que emprega dois cabeçotes, trabalhando em superfícies opostas da peça em exame, é denominado:", o:["Exame por contato", "Exame por meio de ultrassom com ondas de Lamb", "Método de exame por transparência", "Nenhuma das respostas acima está certa"], r:2},
+    {p:1, q:"8)- O número de ondas completas que passam num determinado ponto na unidade de tempo é denominado:", o:["Amplitude do movimento ondulatório", "Duração de um pulso", "Comprimento de onda", "Frequência do movimento ondulatório"], r:3},
+    {p:1, q:"9)- O método de exame no qual a peça não está em contato com o cabeçote, sendo separada deste por uma camada de líquido de acoplante é denominado:", o:["Exame por contato", "Exame com ondas superficiais", "Método de inspeção por transparência", "Exame por imersão"], r:3},
+    {p:1, q:"10)- O limite entre dois materiais diferentes que estão em contato entre si é denominado:", o:["Rarefator", "Refrator", "Marcador", "Interface"], r:3},
+    {p:1, q:"11)- Quando o movimento das partículas de um meio possui sentido paralelo ao sentido de propagação ondas, estas ondas são denominadas:", o:["Transversais", "Superficiais", "De lamb", "Longitudinais"], r:3},
+    {p:1, q:"12)- Outra maneira de dizer 25 milhões de ciclos é:", o:["25 quilociclos", "2.500 quilociclos", "25 microciclos", "25 megaciclos"], r:3},
+    {p:1, q:"13)- O termo usado em ultrassom para expressar a velocidade com que as ondas de sons passam através de várias substâncias é:", o:["Frequência", "Comprimento de onda", "Velocidade", "Nenhuma das respostas acima está certa"], r:2},
+    {p:1, q:"14)- A técnica na qual o feixe de vibrações emitido pelo cristal faz um ângulo com a superfície da peça em exame é denominada:", o:["Técnica de imersão", "Exame por contato", "Exame por transferência", "Exame por meio de ultrassom utilizando cabeçote angular"], r:3},
+    {p:1, q:"15)- O ângulo marcado num cabeçote angular corresponde à direção da propagação do feixe que faz com a normal à superfície de uma peça de:", o:["Normal oblíqua", "Normal à superfície", "Plano da superfície", "Aço"], r:3},
+    {p:1, q:"16)- O ponto de emissão de um certo cabeçote angular:", o:["Depende do material da peça", "Não se altera com o uso", "Pode ser modificado", "Varia de acordo com o desgaste da sapata"], r:3},
+    {p:1, q:"17)- A maioria dos exames por meio de ultrassom é feito na Frequência de:", o:["De 1 a 25 quilociclos", "De 1 a 1.000 quilociclos", "De 15 a 100 megaciclos", "De 1 a 25 megaciclos"], r:3},
+    {p:1, q:"18)- Indique a frequência que proporciona a melhor penetração numa peça de aço, com granulação grosseira, com espessura de 30 mm:", o:["2,25 megahertz", "5,0 megahertz", "10 mc", "1,0 megahertz"], r:3},
+    {p:1, q:"19)- Um aparelho utilizando cabeçote normal em uma chapa plana detectará:", o:["Defeitos transversais", "Defeitos longitudinais", "Defeitos laminares, planos, paralelos à superfície", "Nenhum dos defeitos citados"], r:2},
+    {p:1, q:"20)- No exame de ultrassom, o uso de acoplante se faz necessário porque:", o:["Serve como lubrificante", "O cristal não vibraria", "Fecha o circuito elétrico", "O ar na interface refletiria quase todo feixe sônico"], r:3},
+    {p:1, q:"21)- Qual dos seguintes tipos de ondas se propaga com maior velocidade:", o:["Ondas de corte", "Ondas transversais", "Ondas superficiais", "Ondas Longitudinais"], r:3},
+    {p:1, q:"22)- Ondas com frequência superior à máxima captada pelo ouvido humano são superiores a:", o:["2 megaciclos/s", "2 hilociclos/s", "200 kilociclos/s", "20.000 ciclos por segundo"], r:3},
+    {p:1, q:"23)- Fundamentalmente, a velocidade das ondas de som depende:", o:["Da duração do pulso", "Da Frequência", "Do material e do tipo de ondas", "Nenhum dos fatores citados"], r:2},
+    {p:1, q:"24)- A desvantagem do uso de cristais de quartzo reside no fato de que o quartzo:", o:["Se dissolve na água", "Apresenta instabilidade mecânica", "Perde características com o envelhecimento", "Possui menor eficiência energética"], r:3},
+    {p:1, q:"25)- A vantagem que os materiais cerâmicos apresentam é que:", o:["Eficiência na recepção", "Impedância mecânica baixa", "Trabalham até 700 graus", "Muita eficiência em geração"], r:3},
+    {p:1, q:"26)- A vantagem do uso de cristais de sulfato de lítio é que:", o:["Gerador mais eficiente", "Insolúvel", "Suporta 700 graus", "É um dos mais eficientes receptores"], r:3},
+    {p:1, q:"27)- Indique a Frequência do cabeçote que possui o cristal de quartzo de menor espessura:", o:["1 megaciclo", "5 megaciclos", "15 megaciclos", "25 megaciclos"], r:3},
+    {p:1, q:"28)- Um cabeçote de 25 megaciclos é adequado:", o:["Para contato longitudinal", "Para contato transversal", "Para contato superficial", "Quando se usa a técnica de imersão"], r:3},
+    {p:1, q:"29)- Mudança de direção da propagação ao passar por interface de materiais desiguais:", o:["Atenuação", "Rarefação", "Compressão", "Refração"], r:3},
+    {p:1, q:"30)- Exames por contato direto usando cabeçotes normais não são praticados em alguns casos:", o:["Baixas frequências", "Impossível angulação", "Angulação impossível e frequências limitadas", "Nenhuma anterior"], r:2},
+    {p:1, q:"31)- Qual das Frequências abaixo proporcionaria melhor resolução:", o:["1 megaciclo", "5 megaciclos", "10 megaciclos", "25 megaciclos"], r:3},
+    {p:1, q:"32)- Qual das seguintes peças produz maior atenuação do som:", o:["Peça forjada", "Peça extrudada", "Estimação igual", "Peça fundida de granulação grosseira"], r:3},
+    {p:1, q:"33)- O princípio da ressonância ultrassônica é geralmente usada para:", o:["Detectar grandes descontinuidades", "Detectar porosidade", "Nenhuma anterior", "Medir espessura de parede"], r:3},
+    {p:1, q:"34)- O material piezelétrico do cabeçote:", o:["Converte elétrica em mecânica", "Converte mecânica em elétrica", "Converte elétrica em mecânica e vice-versa", "Nenhuma anterior"], r:2},
+    {p:1, q:"35)- Comprimento de onda mais curto:", o:["1 megaciclo", "10 megaciclos", "5 megaciclos", "25 megaciclos"], r:3},
+    {p:1, q:"36)- O ângulo de incidência é ................. ângulo de reflexão:", o:["Maior do que o", "Menor do que o", "Igual ao", "Nenhuma anterior"], r:2},
+    {p:1, q:"37)- Uma Frequência de 100.000 ciclos por segundo também é:", o:["10 quilociclos", "100 megaciclos", "0,1 quilociclos", "100 quilociclos"], r:3},
+    {p:1, q:"38)- A perda gradual de energia sônica à medida que o feixe se propaga é:", o:["Reflexão", "Refração", "Reprodutibilidade", "Atenuação"], r:3},
+    {p:1, q:"39)- Termo aplicado a trincas, inclusão, porosidade etc.:", o:["Dispersador", "Atenuador", "Refrator", "Descontinuidade"], r:3},
+    {p:1, q:"40)- Uma descontinuidade não produzirá indicação na tela se for usado o exame:", o:["Cabeçote normal", "Ondas superficiais", "Cabeçote angular", "Pelo método de transparência"], r:3}
+   
+    // PROVA 02 
+    {p:2, q:"01)- Indique qual é a frequência da onda ultrassônica que perde mais energia ao propagar-se numa peça metálica de granulação grosseira:", o:["1,0 megaciclos.", "10,0 megaciclos.", "5,0 megaciclos.", "2,25 megaciclos."], r:1},
+    {p:2, q:"02)- Indique a frequência do cabeçote que possui o cristal de quartzo de maior espessura:", o:["1,0 megaciclos.", "5,0 megaciclos.", "10,0 megaciclos.", "2,25 megaciclos"], r:0},
+    {p:2, q:"03)- Cabeçotes construídos de forma que o cristal se apoie numa cunha plástica, sendo feito através desta o contato com a peça em exame, são geralmente usados para:", o:["exames com feixes de ondas ultrassônicas normal a superfície da peça.", "exame por meio de ultrassom usando a técnica de imersão.", "exames com feixes de ondas ultrassônicas em ângulo com a superfície da peça.", "nenhuma das respostas acima está correta."], r:2},
+    {p:2, q:"04)- Após atravessar a interface plana que separa dois metais diferentes, um feixe de ondas ultrassônicas muda de direção, fazendo um ângulo diferente com a interface. Este novo ângulo é denominado:", o:["ângulo de incidência.", "ângulo de rarefação.", "ângulo de reflexão.", "ângulo de refração."], r:3},
+    {p:2, q:"05)- O processo para comparar um instrumento ou aparelho com um padrão de referência é denominado:", o:["angulação.", "varredura.", "correção para variações de distância-amplitude.", "calibração."], r:3},
+    {p:2, q:"06)- O espalhamento de um feixe ultrassônico, causado pela sua reflexão numa superfície irregular é denominado:", o:["angulação.", "refração.", "rarefação.", "dispersão."], r:3},
+    {p:2, q:"07)- O ângulo de reflexão:", o:["é igual ao ângulo de incidência.", "depende da frequência usada.", "é igual ao ângulo de refração.", "depende do acoplamento usado."], r:0},
+    {p:2, q:"08)- Um fluxo de curta duração e intenso de energia elétrica alternada é denominado:", o:["onda contínua.", "pico de voltagem de corrente contínua.", "onda ultrassônica.", "pulso."], r:3},
+    {p:2, q:"09)- No exame por meio de ultrassom, a duração de um pulso é denominada:", o:["amplitude do pulso.", "forma de pulso.", "comprimento do pulso ou largura do pulso.", "nenhuma das respostas acima está correta."], r:2},
+    {p:2, q:"10)- Uma onda muda sua direção de propagação ao atingir o limite do meio em que se desloca e este fenômeno é denominado:", o:["reflexão.", "rarefação.", "angulação.", "divergência."], r:0},
+    {p:2, q:"11)- Ao incidir com ângulo diferente de 90 graus na interface que separa dois meios de elasticidade e densidade diferentes, uma onda ultrassônica continuará se propagando no segundo meio com direção diferente, este fenômeno é denominado:", o:["angulação.", "rarefação.", "refração.", "reflexão."], r:2},
+    {p:2, q:"12)- O método de medir espessura, no qual ondas ultrassônicas de frequência variável são produzidas na peça em exame por meio de um transdutor é denominado:", o:["exame por ressonância.", "exame por manetoestricção.", "exame por transparência.", "exame por feixe angular."], r:0},
+    {p:2, q:"13)- No exame por ressonância, as indicações podem ser obtidas na frequência fundamental de ressonância ou que são múltiplas da frequência fundamental:", o:["na reflexão múltipla.", "nos antinodos.", "nos nodos.", "nenhuma das respostas acima está correta."], r:3},
+    {p:2, q:"14)- Qual das seguintes maneiras de vibração produz pulsos de menor comprimento de onda numa dada frequência e num dado material:", o:["ondas superficiais.", "ondas de compressão.", "ondas de corte.", "ondas longitudinais."], r:2},
+    {p:2, q:"15)- Qual dos seguintes modos de vibração possui geralmente o maior poder de penetração, com frequências iguais, em peças metálicas de granulação grosseira:", o:["de corte.", "transversal.", "longitudinal.", "todas as citadas tem o mesmo poder de penetração."], r:2},
+    {p:2, q:"16)- O tipo de exame, no qual a face maior do cristal é disposta paralelamente a superfície da peça por onde é feito o exame, de forma que o feixe seja transmitido perpendicularmente é denominado:", o:["exame com feixe angular.", "exame com ondas superficiais.", "exame com feixe normal.", "todas as respostas acima estão corretas."], r:2},
+    {p:2, q:"17)- Um método de exame no qual o som é emitido para a peça por um cabeçote e recebido por outro situado na superfície oposta é denominado:", o:["exame com ondas superficiais.", "exame com cabeçote angular.", "exame com cabeçote normal.", "exame por transparência."], r:3},
+    {p:2, q:"18)- Um dispositivo que transforma energia de uma forma em outra é denominado:", o:["emissor.", "transferidor.", "transmissor.", "transdutor."], r:3},
+    {p:2, q:"19)- A distância de um certo ponto de uma onda ultrassônica ao ponto correspondente da onda seguinte é denominado:", o:["frequência.", "velocidade.", "duração do pulso.", "comprimento de onda."], r:3},
+    {p:2, q:"20)- Ao deslocar-se num material, uma onda ultrassônica percorre uma certa distância na unidade de tempo e a isto denominamos:", o:["taxa de repetição do pulso.", "taxa de recuperação do pulso.", "resposta ultrassônica.", "velocidade."], r:3},
+    {p:2, q:"21) Qual dos seguintes modos de vibração possui geralmente o maior poder de penetração, com frequência iguais, em peças metálicas de granulação grosseira?", o:["Longitudinal.", "Transversal.", "Todas as citadas têm o mesmo poder de penetração.", "De corte."], r:0},
+    {p:2, q:"22) Vários feixes de ondas ultrassônicas percorrem uma peça metálica. Indique a frequência do feixe que provavelmente sofre a maior atenuação:", o:["1,0 Megahertz.", "2,25 Megahertz.", "10 Megahertz.", "25 Megahertz."], r:3},
+    {p:2, q:"23) O princípio da ressonância ultrassônica é geralmente usado para :", o:["Medir a espessura da parede.", "Detectar porosidade.", "Nenhuma das respostas citadas está certa.", "Detectar grandes descontinuidades."], r:0},
+    {p:2, q:"24) Um método de exame no qual o som é emitido por um cabeçote e recebido por outro cabeçote, situado na superfície oposta é denominado:", o:["Exame com ondas superficiais.", "Exame por transparência.", "Exame com cabeçote normal.", "Exame com cabeçote angular."], r:1},
+    {p:2, q:"25) O termo usado em ultrassom para expressar a rapidez com que as ondas de sons passam através de várias substâncias é:", o:["Velocidade.", "Comprimento de onda.", "Nenhuma das respostas citadas.", "Frequência."], r:0},
+    {p:2, q:"26) Considerando que as demais variáveis permanecem inalteradas, qual dos seguintes tipos de ondas se propagam com maior velocidade?", o:["Ondas de corte.", "Ondas longitudinais.", "Ondas superficiais.", "Ondas transversais."], r:1},
+    {p:2, q:"27) As ................. se deslocam com uma velocidade ligeiramente menor do que as ondas transversais e sua propagação é longitudinal e transversal em relação à superfície da peça.", o:["Ondas transversais.", "Ondas de Rayleigh.", "Ondas longitudinais.", "Ondas 'L'."], r:1},
+    {p:2, q:"28) Indique a frequência que provavelmente proporciona a melhor penetração num bloco de aço de 300 mm de espessura que possui granulação grosseira:", o:["1,0 Megahertz.", "5,0 Megahertz.", "10,0 Megahertz.", "2,5 Megahertz."], r:0},
+    {p:2, q:"29) Quando o movimento das partículas de um meio possui sentido paralelo no sentido de propagação das ondas, estas ondas são denominadas:", o:["Transversais.", "Longitudinais.", "De Lamb.", "Superficiais."], r:1},
+    {p:2, q:"30) No exame pelo método de imersão, o acoplante geralmente utilizado é:", o:["Água.", "Glicerina.", "Álcool.", "Óleo."], r:0},
+    {p:2, q:"31) O comprimento de onda de uma onda ultrassônica é:", o:["Diretamente proporcional à velocidade e à frequência.", "Inversamente proporcional à velocidade e diretamente proporcional à frequência.", "Igual ao produto da velocidade pela frequência.", "Diretamente proporcional à velocidade e inversamente proporcional à frequência."], r:3},
+    {p:2, q:"32) Num líquido, o único modo de vibração que pode existir é:", o:["Longitudinal.", "Longitudinal e transversal.", "Ondas superficiais.", "Transversal."], r:0},
+    {p:2, q:"33) Ondas com frequência superior à máxima captada pelo ouvido humano são chamadas de ultrassônicas. Este termo se aplica a frequências superiores a:", o:["20000 ciclos por segundo.", "2 kilociclos por segundo.", "200 kilociclos por segundo.", "2 megaciclos por segundo."], r:0},
+    {p:2, q:"34) A maioria dos exames por meio de ultrassom é feito na frequência de:", o:["1 a 25 megaciclos/s.", "1 a1000quilociclos/s.", "15a 100 megaciclos/s.", "1 a 1000 quilociclos/s."], r:0},
+    {p:2, q:"35) No exame por meio de ultrassom, o uso de acoplante se faz necessário porque:", o:["Caso não seja usado, o ar na interface impedirá a emissão do som.", "O cristal não vibrará diretamente na peça.", "Necessário para fechar o circuito elétrico.", "Minimiza o desgaste do cabeçote."], r:0},
+    {p:2, q:"36) Qual das seguintes frequências corresponde o comprimento de onda mais curto?", o:["25 megaciclos/s.", "10 megaciclos/s", "5 megaciclos/s.", "1 megaciclo/s."], r:0},
+    {p:2, q:"37) Indique a frequência que proporciona a melhor penetração numa peça de aço, com granulação grosseira, com espessura de 300 mm:", o:["2,25 Megahertz.", "5,0 Megahertz.", "1,0 Megahertz.", "10 megaciclos/s."], r:2},
+    {p:2, q:"38) O material usado entre a face do cabeçote e a superfície em exame para melhorar a transmissão das ondas ultrassônicas é denominado:", o:["Acoplante.", "Transmissor acústico.", "Lubrificante.", "Agente umedecedor."], r:0},
+    {p:2, q:"39) O método de exame que emprega dois cabeçotes, trabalhando em superfícies opostas da peça em exame, é denominado:", o:["Método de exame por transparência.", "Exame com ondas superficiais.", "Exame com ondas de Lamb.", "Exame por contato."], r:0},
+    {p:2, q:"40) O número de ondas completas que passam num determinado ponto na unidade de tempo é denominado:", o:["Frequência do movimento ondulatório.", "Duração de um pulso.", "Comprimento de onda.", "Amplitude do movimento ondulatório."], r:0}
+    
+    // PROVA 03 
+    {p:3, q:"01) O método de exame no qual a peça não está em contato com o cabeçote, sendo separada deste por uma camada de água ou por outro líquido de acoplamento é denominado:", o:["Exame por contato.", "Exame com ondas superficiais.", "Exame por imersão.", "Método de inspeção por transparência."], r:2},
+    {p:3, q:"02) Quando o movimento das partículas de um meio ocorre num plano normal ao sentido de propagação das ondas, estas ondas são denominadas:", o:["Longitudinais.", "Superficiais.", "De Lamb.", "Transversais."], r:3},
+    {p:3, q:"03) O efeito da variação da voltagem da fonte de energia que alimenta um aparelho para exame por meio de ultrassom pode ser minimizado usando um:", o:["Purificador.", "Regulador de voltagem.", "Cabo longo entre o aparelho e o cabeçote.", "Colimador."], r:1},
+    {p:3, q:"04) O material piezelétrico do cabeçote:", o:["Converte energia elétrica em energia mecânica e vice-versa.", "Converte energia mecânica em energia elétrica.", "Nenhuma das respostas está certa.", "Converte energia elétrica em mecânica."], r:0},
+    {p:3, q:"05) A execução de exame pelo método do contato direto usando cabeçotes normais não é prática em alguns casos:", o:["Porque geralmente é limitado a baixas frequências.", "Porque é impossível fazer angulação.", "Nenhuma destas respostas é correta.", "Porque a angulação é impossível e porque é geralmente limitado a baixas frequência."], r:3},
+    {p:3, q:"06) A vantagem que os materiais cerâmicos apresentam quando usados em cabeçotes é que:", o:["Apresentam muita eficiência em geração de energia ultrassônica.", "Possuem impedância mecânica muito baixa.", "Podem trabalhar em temperaturas de até 700° C.", "Apresentam muita eficiência na recepção de energia ultrassônica."], r:0},
+    {p:3, q:"07) Durante o exame, observou-se queda no eco de fundo sem que aparecesse indicação de descontinuidade. Esta condição deve ser causada:", o:["Por uma descontinuidade que possui inclinação acentuada.", "Por porosidade.", "Todas as respostas estão corretas.", "Por granulação grosseira."], r:2},
+    {p:3, q:"08) A resolução na entrada da superfície define a eficiência na:", o:["Detecção de descontinuidades paralelas ao feixe.", "Detecção de descontinuidades localizadas logo abaixo da superfície.", "Detecção de pequenos arranhões superficiais.", "Detecção no centro de peças forjadas."], r:1},
+    {p:3, q:"09) Um dispositivo que transforma energia de uma forma em outra é denominado:", o:["Emissor.", "Transferidor.", "Transdutor.", "Transmissor."], r:2},
+    {p:3, q:"10) Uma .............. é frequentemente substituída por um documento onde fica registrado permanentemente o que aparece na tela:", o:["Apresentação do tipo 'C-Scan'.", "Apresentação do tipo 'D-Scan'.", "Nenhuma destas respostas está certa.", "Apresentação do tipo 'A-Scan'."], r:0},
+    {p:3, q:"11) Para obter a maior eficiência com transmissor e receptor independentes, os cristais seriam:", o:["Quartzo (T) e Titanato de Bário (R).", "Sulfato de Lítio (T) e Titanato de Bário (R).", "Titanato de Bário (T) e Sulfato de Lítio (R).", "Titanato de Bário (T) e Quartzo (R)."], r:2},
+    {p:3, q:"12) Porque a inspeção ultrassônica de materiais fundidos é geralmente difícil?", o:["Estrutura grosseira causa atenuação e ruídos espúrios.", "Requer dois ou mais transdutores.", "Defeitos são menores que a sensibilidade.", "Requer blocos muito pesados."], r:0},
+    {p:3, q:"13) A resistência ao envelhecimento é uma vantagem dos cabeçotes que usam cristais de:", o:["Sulfato de lítio.", "Titanato de bário.", "Quartzo.", "Sais de rochelle."], r:2},
+    {p:3, q:"14) Um fluxo de curta duração e intenso de energia elétrica alternada é denominado:", o:["Onda contínua.", "Pico de voltagem de corrente contínua.", "Onda ultrassônica.", "Pulso."], r:3},
+    {p:3, q:"15) Aparelho em que os pulsos representam a magnitude da energia em função do tempo possui:", o:["Uma tela de onda contínua.", "Uma apresentação tipo 'A-Scan'.", "Uma apresentação tipo 'C-Scan'.", "Uma apresentação tipo 'B-Scan'."], r:1},
+    {p:3, q:"16) Podem ocorrer erros significativos na medida de espessura se:", o:["A frequência variar numa razão constante.", "A água for usada como acoplante.", "Nenhuma destas respostas está certa.", "For tomado um valor diferente para a velocidade de propagação."], r:3},
+    {p:3, q:"17) Os transdutores geralmente usados em cabeçotes para exame por meio de ultrassom utilizam:", o:["Princípios piezelétricos.", "Princípios de conversão de modo.", "Nenhuma das respostas está correta.", "Princípios de magnetoestricção."], r:0},
+    {p:3, q:"18) A propriedade de transformar energia mecânica em elétrica e vice-versa é denominada:", o:["Conversão de modo.", "Refração.", "Impedância oposta.", "Efeito piezelétrico."], r:3},
+    {p:3, q:"19) Descontinuidade a 3 polegadas de profundidade num bloco de 6 polegadas. Como será mais facilmente detectada?", o:["Usando um cabeçote angular.", "Com ondas superficiais.", "Com ondas de Lamb.", "Usando um cabeçote normal."], r:3},
+    {p:3, q:"20) A vantagem do uso de cristais de sulfato de lítio em cabeçotes é que:", o:["Eficiente receptor de energia.", "É insolúvel.", "Suporta temperaturas de 7000 C.", "Eficiente gerador de energia."], r:0},
+    {p:3, q:"21) Qual material transforma com maior eficiência voltagem em vibrações mecânicas?", o:["Titanato de bário.", "Quartzo.", "Óxido de prata.", "Sulfato de lítio."], r:0},
+    {p:3, q:"22) Qual material transforma com maior eficiência vibrações mecânicas em voltagem?", o:["Quartzo.", "Sulfato de lítio.", "Óxido de prata.", "Titanato de bário."], r:1},
+    {p:3, q:"23) Numa apresentação tipo 'A-Scan', a altura das indicações verticais representa:", o:["Quantidade de energia refletida.", "Espessura da peça.", "Tempo corrido desde a geração.", "Distância percorrida pelo cabeçote."], r:0},
+    {p:3, q:"24) Numa apresentação tipo 'A-Scan', a linha de base horizontal representa:", o:["Tempo decorrido ou distância entre superfícies.", "Distância percorrida pelo cabeçote.", "Espessura da peça.", "Quantidade de energia refletida."], r:0},
+    {p:3, q:"25) Uma característica da propagação em meios líquidos é que:", o:["somente se propagam as ondas longitudinais.", "podem se propagar quaisquer vibrações.", "velocidade maior que nos metálicos.", "vibrações são fortemente atenuadas."], r:0},
+    {p:3, q:"26) A desvantagem do uso de cristais de quartzo reside no fato de que:", o:["Menor eficiência energética na geração.", "Instabilidade elétrica e mecânica.", "Perde características com o envelhecimento.", "Se dissolve na água."], r:0},
+    {p:3, q:"27) Indique a frequência do cabeçote que possui o cristal de quartzo de menor espessura.", o:["1 megaciclo/s.", "25 megaciclo/s.", "15 megaciclo/s.", "5 megaciclo/s."], r:1},
+    {p:3, q:"28) Exame com cabeçote normal em chapa plana detectará:", o:["Defeitos transversais perpendiculares.", "Defeitos longitudinais perpendiculares.", "Defeitos laminares paralelos à superfície.", "Nenhum dos defeitos citados."], r:2},
+    {p:3, q:"29) Tela que mostra uma vista em planta da peça e de seus defeitos:", o:["Leitura automática.", "Apresentação tipo 'A-Scan'.", "Apresentação tipo 'C-Scan'.", "Apresentação tipo 'B-Scan'."], r:2},
+    {p:3, q:"30) A maioria dos aparelhos do tipo pulso-eco usa:", o:["Leitura automática.", "Apresentação tipo 'A-Scan'.", "Apresentação tipo 'C-Scan'.", "Apresentação tipo 'B-Scan'."], r:1},
+    {p:3, q:"31) O número de pulsos produzidos num dado período de tempo é denominado:", o:["Freqüência de repetição de pulso.", "Tempo de recuperação do pulso.", "Freqüência do aparelho.", "Comprimento do pulso."], r:0},
+    {p:3, q:"32) Após varrer com cabeçote grande, é necessário usar um............ para avaliar precisamente.", o:["Purificador.", "Cabeçote de cristal pequeno.", "Colimador.", "Mapa da peça."], r:1},
+    {p:3, q:"33) Transdutores que contém dois cristais individuais são:", o:["transdutores duplo-cristal.", "transdutores SE.", "transdutores de duplos elementos.", "as alternativas (a) e (b) são corretas."], r:3},
+    {p:3, q:"34) A frequência fundamental de um cristal de quartzo é função:", o:["Do comprimento do pulso de voltagem.", "Do amplificador de pulso.", "Da espessura do cristal.", "Nenhuma das respostas está certa."], r:2},
+    {p:3, q:"35) Indicação que representa a superfície oposta àquela em que se apoia o cabeçote:", o:["Pico.", "Eco de fundo.", "Eco principal.", "Pulso inicial."], r:1},
+    {p:3, q:"36) No exame por Imersão, variar a posição para vários ângulos denomina-se:", o:["Dispersão.", "Teste de reflexão.", "Refração.", "Angulação."], r:3},
+    {p:3, q:"37) O processo para comparar um instrumento com um padrão é denominado:", o:["Angulação.", "Atenuação.", "Calibração.", "Correlação."], r:2},
+    {p:3, q:"38) Onda de 4 MHz no aço (6000 m/s) terá comprimento de onda de:", o:["2 mm.", "1,5 mm.", "4 mm.", "3 mm."], r:1},
+    {p:3, q:"39) A inclinação da superfície refletora com relação à superfície da peça é:", o:["Ângulo de incidência.", "Ângulo de refração.", "A orientação da descontinuidade.", "Nenhuma das respostas está correta."], r:2},
+    {p:3, q:"40) No exame por contato, a indicação da superfície onde o cabeçote se apoia é:", o:["Ruído.", "Ganho.", "Pico inicial.", "Nenhuma das respostas está correta."], r:2}
 
-        document.getElementById('start-quiz').addEventListener('click', function() {
-            currentExam = document.getElementById('exam-select').value;
-            document.getElementById('quiz-container').style.display = 'block';
-            document.getElementById('question').innerText = '';
-            document.getElementById('options').innerHTML = '';
-            currentQuestion = 0;
-            score = 0;
-            showQuestion();
-        });
+    // PROVA 04 
+    {p:4, q:"01) O ângulo de incidência é .......... ângulo de reflexão.", o:["Igual ao.", "Menor que o.", "Nenhuma das respostas está correta.", "Maior do que o."], r:0},
+    {p:4, q:"02) Cabeçotes com cristal em cunha plástica, sendo feito através desta o contato com a peça, são usados para:", o:["Exames com feixe em ângulo com à superfície.", "Exame usando a técnica de imersão.", "Nenhuma das respostas está correta.", "Exames com feixe normal à superfície."], r:0},
+    {p:4, q:"03) A fórmula senA/velA = senB/velB é denominada:", o:["Fórmula da razão da impedância acústica.", "Fórmula da conversão de fase.", "Formula da zona de Fresnel.", "Lei de Snell."], r:3},
+    {p:4, q:"04) A fórmula senA/velA = senB/velB é usada para determinar:", o:["Relações angulares.", "A quantidade de energia refletida.", "A impedância acústica.", "Velocidade da fase."], r:0},
+    {p:4, q:"05) Em qual dos materiais abaixo a velocidade de propagação do ultrassom é maior?", o:["Alumínio.", "Ar.", "Aço inoxidável.", "Água."], r:0},
+    {p:4, q:"06) Após atravessar a interface que separa dois metais, o feixe muda de direção. Este novo ângulo é o:", o:["Ângulo de incidência.", "Ângulo de rarefação.", "Ângulo de refração.", "Ângulo de reflexão."], r:2},
+    {p:4, q:"07) O ângulo do feixe sônico ao passar da água para o metal será função:", o:["Das impedâncias acústicas.", "Das velocidades relativas do som na água e no metal.", "Das densidades.", "Da frequência das ondas."], r:1},
+    {p:4, q:"08) O ângulo de incidência que corresponde a um ângulo de refração de 90 graus é denominado:", o:["Ângulo normal.", "Ângulo crítico.", "Nenhuma das respostas está correta.", "Angulo de reflexão máxima."], r:1},
+    {p:4, q:"09) Quais dos cristais abaixo podem ser utilizados como cristais ultrassônicos:", o:["metaniobato de chumbo.", "titanato de bário.", "sulfato de lítio.", "todos acima podem ser usados."], r:3},
+    {p:4, q:"10) O limite entre dois materiais diferentes que estão em contato entre si é denominado:", o:["Rarefator.", "Interface.", "Marcador.", "Refrator."], r:1},
+    {p:4, q:"11) No exame por contato, as ondas de corte podem ser produzidas no metal:", o:["Com cristal X e óleo.", "Usando dois transdutores opostos.", "Com lentes acústicas esféricas.", "Usando um cabeçote angular com cunha de plástico."], r:3},
+    {p:4, q:"12) O componente que produz sinais na tela usados para medir distâncias é o:", o:["Circuito marcador, ou de tempo.", "Circuito receptor.", "Sincronizador.", "Circuito de varredura."], r:0},
+    {p:4, q:"13) A divergência do feixe:", o:["Diminui se a frequência ou diâmetro diminuem.", "Aumenta se a frequência ou o diâmetro do cristal diminuem.", "Diminui se a frequência aumenta e diâmetro diminui.", "Aumenta se a frequência aumenta e diâmetro diminui."], r:1},
+    {p:4, q:"14) O que ocorre quando um feixe atinge uma superfície de dois materiais dissimilares?", o:["Reflexão.", "Refração.", "Reflexão, refração e conversão de modo.", "Conversão de modo."], r:2},
+    {p:4, q:"15) Exame onde a face maior do cristal é paralela à superfície e o feixe é transmitido perpendicularmente:", o:["Exame com feixe normal.", "Exame com ondas superficiais.", "Todas as respostas estão corretas.", "Exame com feixe angular."], r:0},
+    {p:4, q:"16) O processo para comparar um instrumento com um padrão de referência é denominado:", o:["Angulação.", "Calibração.", "Correção distância-amplitude.", "Varredura."], r:1},
+    {p:4, q:"17) Melhor método para detectar descontinuidades na zona de fusão numa chapa soldada:", o:["Contato angular, ondas superficiais.", "Contato normal, ondas longitudinais.", "Feixe angular, ondas transversais.", "Imersão, ondas superficiais."], r:2},
+    {p:4, q:"18) Se o feixe incidir numa parede lateral antes de atingir a parede posterior ocorre:", o:["Reflexões múltiplas da parede lateral.", "Conversão de modo (longitudinal para transversal).", "Perda da indicação da parede de entrada.", "Reflexões múltiplas da parede de entrada."], r:1},
+    {p:4, q:"19) Técnica na qual o feixe emitido faz um ângulo com a superfície da peça:", o:["Técnica de imersão.", "Exame por contato.", "Exame utilizando cabeçote angular.", "Exame por transparência."], r:2},
+    {p:4, q:"20) Indique a frequência do cabeçote que possui o cristal de quartzo de maior espessura:", o:["1,0 megaciclos.", "5,0 megaciclos.", "10,0 megaciclos.", "2,25 megaciclos."], r:0},
+    {p:4, q:"21) Tubo de vácuo onde um feixe de elétrons reproduz imagens na tela fluorescente:", o:["Tubos de raios catódicos.", "Tubo pulsador.", "Tubo de varredura.", "Tubo amplificador."], r:0},
+    {p:4, q:"22) Velocidade Al = 612.500 cm/s e comprimento de onda = 2 mm, qual a frequência?", o:["2 MHz.", "3 MHz.", "4 MHz.", "5 MHz."], r:1},
+    {p:4, q:"23) À medida que a frequência aumenta, o ângulo de divergência do feixe:", o:["Diminui.", "Aumenta.", "Varia uniformemente.", "Permanece inalterado."], r:0},
+    {p:4, q:"24) Indique o material no qual a propagação do som ocorre com a menor perda de energia:", o:["Um lingote de aço.", "Alumínio fundido.", "Lingote de alumínio.", "Alumínio forjado."], r:3},
+    {p:4, q:"25) As ondas de Lamb podem ser usadas para inspecionar:", o:["Chapas finas.", "Barras laminadas.", "Lingotes.", "Forjados."], r:0},
+    {p:4, q:"26) A equação que descreve o comprimento de onda é:", o:["V x f.", "V / f.", "f + V.", "2 x V x f."], r:1},
+    {p:4, q:"27) A intensidade sonora diminui conforme nos afastamos do cristal devido a:", o:["atenuação sônica", "anisotropia", "interferência ondulatória", "divergência do feixe sônico"], r:3},
+    {p:4, q:"28) Onda longitudinal Al = 635.000 cm/s e f = 1 megaciclo. O comprimento de onda é:", o:["6,35 pés.", "6,35 mm.", "30.000 angstrons.", "3,10 polegadas."], r:1},
+    {p:4, q:"29) Em qual dos materiais relacionados abaixo a velocidade do som é menor?", o:["Água.", "Cobre.", "Aço.", "Alumínio"], r:0},
+    {p:4, q:"30) Uma onda muda sua direção ao atingir o limite do meio. Denomina-se:", o:["Reflexão.", "Rarefação.", "Angulação.", "Divergência."], r:0},
+    {p:4, q:"31) Incidência com ângulo diferente de 90° em interface de meios diferentes. Denomina-se:", o:["Angulação.", "Rarefação.", "Refração.", "Reflexão."], r:2},
+    {p:4, q:"32) Indicações em ondas superficiais podem resultar de:", o:["Descontinuidades superficiais.", "Óleo na superfície.", "Sujeira na superfície.", "Todas as respostas estão corretas."], r:3},
+    {p:4, q:"33) Exame onde o cabeçote está em contato direto com a peça:", o:["Cabeçote normal.", "Ondas superficiais.", "Cabeçote angular.", "Todas as respostas estão corretas."], r:3},
+    {p:4, q:"34) Propagação no segundo material em direção diferente devido a:", o:["Refração.", "Rarefação.", "Compressão.", "Atenuação."], r:0},
+    {p:4, q:"35) O ângulo marcado num cabeçote angular corresponde ao ângulo com a normal em peça de:", o:["Aço (referência).", "Plástico.", "Alumínio.", "Qualquer metal."], r:0},
+    {p:4, q:"36) O ponto de emissão de certo cabeçote angular:", o:["Depende do material.", "Varia com o desgaste da sapata.", "Pode ser modificado.", "Não se altera com o uso."], r:1},
+    {p:4, q:"37) Aplicação comum de ondas transversais:", o:["Propriedades elásticas.", "Laminares em chapas grossas.", "Detecção em soldas.", "Espessura em chapas finas."], r:2},
+    {p:4, q:"38) Interface água-aço, ângulo de incidência 7°. Modo principal no aço:", o:["Longitudinal e transversal.", "Transversal.", "Ondas superficiais.", "Longitudinal."], r:0},
+    {p:4, q:"39) Antes de examinar forjado com carepa aderente é necessário:", o:["Remover óxido completamente.", "Primeira usinagem.", "Limpar carepa frouxa.", "Decapar a superfície."], r:2},
+    {p:4, q:"40) Interface alumínio-água, o ângulo de reflexão:", o:["É igual ao ângulo de incidência.", "Quatro vezes maior.", "0,256 vezes.", "Metade do ângulo."], r:0}
 
-        document.getElementById('next').addEventListener('click', function() {
-            const selectedOption = document.querySelector('input[name="option"]:checked');
-            if (selectedOption) {
-                if (selectedOption.value === questions[currentExam][currentQuestion].answer) {
-                    score++;
-                }
-                currentQuestion++;
-                if (currentQuestion < questions[currentExam].length) {
-                    showQuestion();
-                } else {
-                    showResults();
-                }
-            } else {
-                alert('Please select an answer.');
-            }
-        });
+    // PROVA 05 
+    {p:5, q:"01) A distância de um certo ponto de uma onda ultrassônica ao ponto correspondente da onda seguinte é denominada:", o:["Frequência.", "Velocidade.", "Comprimento de onda.", "Duração de pulso."], r:2},
+    {p:5, q:"02) As ondas de compressão são também denominadas:", o:["Ondas de Lamb.", "Ondas de corte.", "Ondas longitudinais.", "Ondas transversais."], r:2},
+    {p:5, q:"03) Fundamentalmente, a velocidade das ondas de som depende:", o:["Da duração do pulso.", "Da Frequência.", "De nenhum dos fatores citados.", "Do material através do qual o som se transmite e do tipo de onda."], r:3},
+    {p:5, q:"04) Uma Frequência de 100.000 ciclos/s também pode ser designada por:", o:["10 quilociclos.", "100 quilociclos.", "0,1 quilociclo.", "1 quilociclos."], r:1},
+    {p:5, q:"05) Em geral as ondas transversais são mais sensíveis a pequenas descontinuidades do que as longitudinais porque:", o:["Não são facilmente dispersadas.", "Vibração das partículas é mais eficiente.", "Possuem menor comprimento de onda.", "Possuem maior comprimento de onda."], r:2},
+    {p:5, q:"06) Indique qual é a Frequência da onda ultrassônica que perde mais energia ao propagar-se numa peça de granulação grosseira:", o:["1,0 megaciclo.", "10,0 megaciclos.", "5,0 megaciclos.", "2,25 megaciclos."], r:1},
+    {p:5, q:"07) Indique a Frequência do feixe que sofre a maior atenuação ao propagar-se num bloco de aço:", o:["1,0 Megahertz.", "2,25 Megahertz.", "5,0 Megahertz.", "10,0 Megahertz."], r:3},
+    {p:5, q:"08) Ondas de compressão-rarefação, com partículas deslocando-se paralelamente à direção de propagação, são:", o:["Ondas longitudinais.", "Ondas de Lamb.", "Ondas de Rayleigh.", "Ondas de corte."], r:0},
+    {p:5, q:"09) Indique o modo de vibração que é amortecido mais rapidamente quando o exame é feito pelo método de imersão:", o:["Ondas longitudinais.", "Ondas de corte.", "Ondas superficiais.", "Ondas transversais."], r:2},
+    {p:5, q:"10) Como se movimenta um conjunto de partículas quando estimulado por ondas transversais?", o:["Paralela à direção de propagação.", "Trajetória elíptica na superfície.", "Transversal à direção de propagação.", "Polarizado num plano a 45 graus."], r:2},
+    {p:5, q:"11) A inspeção de fundidos frequentemente é impraticável porque:", o:["As linhas de fluxo são uniformes.", "As peças possuem granulação muito fina.", "As descontinuidades são orientadas ao acaso.", "As peças possuem granulação grosseira."], r:3},
+    {p:5, q:"12) No A-Scan, indicações verticais fortes que se deslocam horizontalmente e não são reproduzíveis indicam:", o:["Interferência elétrica.", "Uma trinca irregular.", "Uma bolha de gás.", "Existência de porosidade."], r:0},
+    {p:5, q:"13) A principal finalidade dos blocos de referência é:", o:["Reproduzir as condições da peça, com ou sem defeitos.", "Obter a maior sensibilidade possível.", "Nenhuma destas respostas está correta.", "Obter o máximo de reflexão posterior."], r:0},
+    {p:5, q:"14) A quantidade de energia refletida por uma descontinuidade dependerá:", o:["Do tamanho da descontinuidade.", "Da orientação da descontinuidade.", "Do tipo de descontinuidade.", "De todos os fatores citados."], r:3},
+    {p:5, q:"15) A perda gradual da energia sônica à medida que o feixe se propaga é denominada:", o:["Atenuação.", "Refração.", "Reprodutibilidade.", "Reflexão."], r:0},
+    {p:5, q:"16) O termo geral aplicado a trincas, inclusões, porosidades etc. é:", o:["Descontinuidade.", "Atenuador.", "Refrator.", "Dispersador."], r:0},
+    {p:5, q:"17) Blocos de metal que contém um ou mais furos para simular descontinuidades são chamados de:", o:["Blocos de referência.", "Colimadores.", "Anguladores.", "Purificadores."], r:0},
+    {p:5, q:"18) Em geral, as descontinuidades em produtos laminados tendem a ser orientadas:", o:["Na direção de laminação.", "Transversal à superfície.", "Transversal à de laminação.", "Ao acaso."], r:0},
+    {p:5, q:"19) Defeitos muito próximos da superfície podem não ser detectados devido:", o:["Ao efeito do campo próximo.", "À atenuação.", "Ao tempo de recuperação (zona morta).", "À refração."], r:2},
+    {p:5, q:"20) No exame por contato (A-Scan), o pico inicial é:", o:["Indicação à esquerda que corresponde à superfície de entrada.", "Um pico que aparece e desaparece.", "Sempre o segundo pulso da esquerda.", "O primeiro pulso próximo ao lado direito."], r:0},
+    {p:5, q:"21) A falta de paralelismo entre a superfície de exame e a superfície posterior:", o:["Dificulta a detecção de defeitos paralelos.", "Pode fazer com que o eco de fundo não apareça.", "Reduz o poder de penetração.", "Detecta presença de porosidade."], r:1},
+    {p:5, q:"22) Qual maneira de vibração produz pulsos de menor comprimento de onda numa dada Frequência?", o:["Ondas longitudinais.", "Ondas superficiais.", "Ondas de corte.", "Ondas de compressão."], r:1},
+    {p:5, q:"23) Quais ondas se propagam em superfícies curvas sem reflexão das curvas?", o:["Ondas transversais.", "Ondas superficiais.", "Ondas longitudinais.", "Ondas de corte."], r:1},
+    {p:5, q:"24) Nas mesmas circunstâncias, qual frequência proporciona melhor resolução?", o:["1 megaciclo/s.", "5 megaciclo/s.", "25 megaciclo/s.", "10 megaciclo/s."], r:2},
+    {p:5, q:"25) A profundidade de uma descontinuidade não pode ser determinada:", o:["Com cabeçote normal.", "Pelo método de transparência.", "Com cabeçote angular.", "Com ondas superficiais."], r:1},
+    {p:5, q:"26) Uma descontinuidade não produzirá indicação na tela se for usado o exame:", o:["Com cabeçote normal.", "Pelo método de transparência.", "Com cabeçote angular.", "Com ondas superficiais."], r:1},
+    {p:5, q:"27) Uma onda percorre uma certa distância na unidade de tempo. Denominamos:", o:["Taxa de repetição.", "Velocidade.", "Resposta ultrassônica.", "Taxa de recuperação."], r:1},
+    {p:5, q:"28) No aço, a velocidade do som é maior em qual modo de vibração?", o:["Longitudinal.", "Onda superficial.", "Mesma em todos os modos.", "De corte."], r:0},
+    {p:5, q:"29) Onda de 2 MHz no aço (V = 5.900 m/s) terá comprimento de onda de:", o:["2,27 mm", "2,95 mm", "29,5 mm", "36,3 mm"], r:1},
+    {p:5, q:"30) A faixa de frequência considerada infrassom é:", o:["acima de 20 kHz", "abaixo de 45 Hz", "abaixo de 20000 Hz", "Abaixo de 20 Hz"], r:3},
+    {p:5, q:"31) Se um som de grande intensidade for produzido na Frequência de 23 kHz:", o:["Pode causar surdez.", "Não será ouvido (frequência ultrassônica).", "Será muito agudo.", "Será ouvido normalmente."], r:1},
+    {p:5, q:"32) Para permitir o acoplamento acústico do transdutor na peça devemos:", o:["usinar a superfície.", "pressionar o transdutor.", "utilizar o líquido acoplante.", "preparar a superfície."], r:2},
+    {p:5, q:"33) O tipo de onda longitudinal é gerado por transdutores:", o:["angulares.", "normais.", "bi-focais.", "de banda larga."], r:1},
+    {p:5, q:"34) Qual dos transdutores abaixo possuirá maior divergência:", o:["diâmetro 24 mm.", "diâmetro 12 mm.", "diâmetro 5 mm.", "frequência 1 MHz."], r:2},
+    {p:5, q:"35) Qual dos materiais abaixo possui maior impedância acústica?", o:["aço inoxidável.", "alumínio.", "água.", "acrílico."], r:0},
+    {p:5, q:"36) A velocidade das ondas acústicas longitudinais no aço é aproximadamente:", o:["o dobro das transversais.", "5900 m/s.", "1500 m/s.", "as alternativas (a) e (b) são corretas."], r:3},
+    {p:5, q:"37) Na inspeção de fundidos, é recomendado o uso de transdutores:", o:["maior diâmetro possível.", "maior Frequência possível.", "menor diâmetro.", "menor Frequência."], r:3},
+    {p:5, q:"38) Um transdutor com baixa Frequência (0,5 MHz) é utilizado em:", o:["chapas laminadas.", "inspeção de fundidos.", "soldas em inox.", "tubos por imersão."], r:1},
+    {p:5, q:"39) A impedância acústica pode ser avaliada através da fórmula:", o:["densidade x velocidade.", "velocidade x elasticidade.", "densidade x atenuação.", "velocidade / densidade."], r:0},
+    {p:5, q:"40) Qual acoplante seria melhor e mais prático para inspeção de aços laminados:", o:["óleo diesel.", "glicerina.", "metil celulose.", "água"], r:1}
 
-        function showQuestion() {
-            const questionData = questions[currentExam][currentQuestion];
-            document.getElementById('question').innerText = questionData.question;
-            const optionsDiv = document.getElementById('options');
-            optionsDiv.innerHTML = '';
-            questionData.options.forEach(option => {
-                const optionHTML = `<label><input type='radio' name='option' value='${option}'> ${option}</label>`;
-                optionsDiv.innerHTML += optionHTML;
-            });
-            document.getElementById('show-results').style.display = 'none';
-        }
+    // PROVA 06 
+    {p:6, q:"01) Uma característica da propagação da vibração acústica nos meios líquidos é que:", o:["somente se propagam as ondas longitudinais.", "podem se propagar quaisquer tipos de vibrações.", "velocidade é muito maior que nos metálicos.", "vibrações são fortemente atenuadas."], r:0},
+    {p:6, q:"02) O comprimento de onda de uma vibração mecânica pode ser calculado:", o:["pelo produto da frequência e velocidade.", "pela razão entre frequência e velocidade.", "pela razão entre velocidade e frequência.", "pelo produto da densidade e velocidade."], r:2},
+    {p:6, q:"03) O uso de jateamento ou esmerilhamento para preparação das superfícies para ultrassom:", o:["não é recomendável.", "pode ser aplicado, dependendo do acabamento.", "pode ser aplicado desde que feita pré-usinagem.", "não recomendável apenas para alta frequência."], r:1},
+    {p:6, q:"04) A intensidade sonora diminui conforme nos afastamos do cristal no eixo central devido a:", o:["atenuação sônica.", "anisotropia do material.", "interferência ondulatória.", "divergência do feixe sônico."], r:3},
+    {p:6, q:"05) Quais dos cristais abaixo que podem ser utilizados como cristais ultrassônicos:", o:["metaniobato de chumbo.", "titanato de bário.", "sulfato de lítio.", "todos acima podem ser usados."], r:3},
+    {p:6, q:"06) Os transdutores ultrassônicos angulares geram ondas com ângulos:", o:["iguais ao valor gravado no transdutor.", "iguais ao gravado, válidos para o aço.", "menores que 90 graus para qualquer material.", "as alternativas (a) e (c) são corretas."], r:1},
+    {p:6, q:"07) Transdutores ultrassônicos com pequenos diâmetros geram:", o:["feixe com pouca divergência.", "um campo próximo menor.", "feixe com muita divergência.", "as alternativas (b) e (c) são corretas."], r:3},
+    {p:6, q:"08) Em geral, uma descontinuidade pequena posicionada no campo próximo:", o:["é de difícil análise.", "não pode ser detectada.", "seu comprimento será menor que o real.", "só detectada se for maior que 2x o comprimento de onda."], r:0},
+    {p:6, q:"09) Teoricamente, a menor descontinuidade detectável deve ter:", o:["dimensões maiores que metade do comprimento de onda.", "dimensões maiores que metade do campo próximo.", "no mínimo o diâmetro do furo do bloco Tipo 1.", "no mínimo 1/4 do comprimento de onda."], r:0},
+    {p:6, q:"10) A razão entre o seno do ângulo de incidência e a velocidade no mesmo meio define:", o:["a lei de Snell.", "o princípio da interferência.", "a divergência do feixe.", "o comprimento do campo próximo."], r:0},
+    {p:6, q:"11) A diferença entre ondas de compressão e ondas de cisalhamento é:", o:["tamanho do comprimento de onda.", "direção de vibração das partículas.", "amplitude.", "frequência."], r:1},
+    {p:6, q:"12) A habilidade dos transdutores em detectar ecos de pequenas descontinuidades é:", o:["resolução.", "sensibilidade.", "definição.", "ganho."], r:1},
+    {p:6, q:"13) O comprimento do campo próximo de um transdutor normal pode ser calculado por:", o:["Diâmetro / 4 x frequência.", "Velocidade / 2 x Comprimento de onda.", "Diâmetro² / 4 x Comprimento de onda.", "nenhuma das alternativas."], r:2},
+    {p:6, q:"14) Na representação B-scan, a imagem na tela do aparelho:", o:["sistema de dois eixos (x,y) no plano.", "representará os ecos das interfaces.", "representará o volume da secção da peça.", "nenhuma das alternativas."], r:2},
+    {p:6, q:"15) O método por transparência tem sua aplicação típica quando:", o:["se pretende avaliar a profundidade.", "se pretende avaliar o tamanho.", "se pretende avaliar a natureza.", "se pretende apenas aplicar inspeção 'passa / não passa'."], r:3},
+    {p:6, q:"16) Campo próximo de transdutor 10mm, 4 MHz no aço (V~5.9mm/us) é aproximadamente:", o:["0,08 cm.", "17 mm (6,25cm no cálculo teórico ideal).", "55,8 cm.", "16 mm."], r:1},
+    {p:6, q:"17) A dificuldade na obtenção e interpretação de registros no ultrassom representa:", o:["desvantagem na aplicação deste método.", "inverdade.", "característica de obras de campo.", "nenhuma das alternativas."], r:0},
+    {p:6, q:"18) Qual dos materiais abaixo possui maior velocidade de propagação do som:", o:["aço.", "água.", "alumínio.", "chumbo."], r:2},
+    {p:6, q:"19) O fenômeno da divergência que ocorre na propagação é devido:", o:["à estrutura do material.", "ao afastamento da frente de ondas em relação ao transdutor.", "à atenuação do som.", "à variação da frequência."], r:1},
+    {p:6, q:"20) No contato direto em granulação grosseira, ecos de baixa amplitude na tela são:", o:["ecos de indicações.", "ecos espúrios (ruído).", "descontinuidades.", "granulometria."], r:1},
+    {p:6, q:"21) Qual das ondas sonoras pode ser transmitida através dos líquidos?", o:["transversal.", "longitudinal.", "de cisalhamento.", "nenhuma delas."], r:1},
+    {p:6, q:"22) A superfície limite entre o metal base e uma descontinuidade forma:", o:["uma interface.", "um eco espúrio.", "um eco de reflexão.", "as alternativas (a) e (c) são possíveis."], r:3},
+    {p:6, q:"23) Para detectar defeitos planares paralelos à superfície, qual método é usado?", o:["feixe angular.", "transmissão.", "feixe reto ou longitudinal.", "transparência."], r:2},
+    {p:6, q:"24) A velocidade do som nos materiais é primeiramente dependente:", o:["do comprimento do pulso.", "da frequência.", "do material e do modo de vibração.", "nenhuma das alternativas."], r:2},
+    {p:6, q:"25) Em qual zona a densidade de energia é mais intensa e causa interferência?", o:["campo longínquo.", "campo próximo.", "zona morta.", "zona de Snell."], r:1},
+    {p:6, q:"26) O fenômeno da divergência é primeiramente causado por:", o:["atenuação.", "espalhamento.", "abertura do feixe sônico.", "interface."], r:2},
+    {p:6, q:"27) Comprimento de onda 3mm e velocidade 6000 m/s. Qual a frequência?", o:["1 MHz.", "2 MHz.", "4 MHz.", "5 MHz."], r:1},
+    {p:6, q:"28) A frequência de uma vibração mecânica depende:", o:["do material.", "da temperatura.", "do modo de vibração.", "da fonte emissora."], r:3},
+    {p:6, q:"29) O controle de ganho é calibrado em:", o:["metros/segundos.", "unidades de energia.", "decibel.", "Angstrons."], r:2},
+    {p:6, q:"30) Qual transdutor terá tamanho maior para o campo próximo (mesmo material)?", o:["Ø 24 mm.", "Ø 10 mm.", "Ø 15 mm.", "Ø 5 mm."], r:0},
+    {p:6, q:"31) No aço, a velocidade do som será maior em qual modo?", o:["longitudinal.", "transversal.", "superficial.", "idêntica em todos os modos."], r:0},
+    {p:6, q:"32) Por que a inspeção de fundidos é geralmente difícil?", o:["estrutura grosseira causa atenuação e ruídos.", "uso de dois ou mais transdutores.", "defeitos menores que a sensibilidade.", "blocos de calibração pesados."], r:0},
+    {p:6, q:"33) A falta de paralelismo entre superfície de entrada e de fundo:", o:["pode resultar em tela sem reflexão de fundo.", "dificulta localizar defeitos paralelos.", "indica que existe porosidade.", "reduz a sensibilidade."], r:0},
+    {p:6, q:"34) Transdutores que contém dois cristais individuais são do tipo:", o:["duplo-cristal.", "SE.", "duplos elementos.", "as alternativas (a) e (b) são corretas."], r:3},
+    {p:6, q:"35) Um outro nome para zona de Fresnel é:", o:["zona de Fraunhofer.", "campo próximo.", "campo longínquo.", "zona morta."], r:1},
+    {p:6, q:"36) Onda de 4 MHz no aço (v = 6000 m/s) terá comprimento de onda de:", o:["2 mm.", "1,5 mm.", "4 mm.", "3 mm."], r:1},
+    {p:6, q:"37) O tipo de onda transversal é gerado por transdutores:", o:["angulares.", "normais.", "bi-focais.", "de banda larga."], r:0},
+    {p:6, q:"38) Cabeçotes com cristal em cunha plástica para contato são usados para:", o:["Exames com feixe em ângulo.", "Técnica de imersão.", "Nenhuma das respostas.", "Exames com feixe normal."], r:0},
+    {p:6, q:"39) A fórmula senA/velA = senB/velB é denominada:", o:["razão da impedância.", "conversão de fase.", "zona de Fresnel.", "Lei de Snell."], r:3},
+    {p:6, q:"40) A divergência do feixe aumenta se:", o:["a frequência ou o diâmetro diminuem.", "a frequência ou o diâmetro aumentam.", "a frequência aumenta.", "o diâmetro aumenta."], r:0}
 
-        function showResults() {
-            document.getElementById('quiz-container').style.display = 'none';
-            const resultDiv = document.getElementById('result');
-            resultDiv.innerHTML = `You scored ${score} out of ${questions[currentExam].length}`;
-            resultDiv.style.display = 'block';
-        }
-    </script>
+    // PROVA 07 
+    {p:7, q:"01) Indique a frequência do cabeçote que possui o cristal de quartzo de menor espessura.", o:["25 megaciclos", "15 megaciclos", "5 megaciclos", "1 megaciclo"], r:0},
+    {p:7, q:"02) A divergência de um cristal de quartzo é função principalmente:", o:["Do tipo de exame que está sendo executado.", "Do aperto com que o cristal é montado.", "Da duração do pulso.", "Do tamanho e da frequência do cristal."], r:3},
+    {p:7, q:"03) Quando o feixe passa de um material para outro com ângulo diferente de 90° e muda de direção, isso ocorre devido a:", o:["Refração", "Rarefação", "Atenuação", "Compressão"], r:0},
+    {p:7, q:"04) Nas mesmas circunstâncias, qual das frequências relacionadas abaixo proporcionaria melhor resolução?", o:["10 megaciclos", "25 megaciclos", "5 megaciclos", "1 megaciclo"], r:1},
+    {p:7, q:"05) Qual das seguintes superfícies possui acabamento mais fino?", o:["Acabamento por usinagem com rugosidade de 63 RMS.", "Acabamento por usinagem com rugosidade de 125 RMS.", "Acabamento bruto de fundição.", "Corte oxiacetilenico."], r:0},
+    {p:7, q:"06) Qual das seguintes peças produz maior atenuação do som numa certa distância?", o:["Uma peça forjada.", "Uma peça extrudada.", "A estimação é igual em todas as peças citadas.", "Uma peça fundida de granulação grosseira."], r:3},
+    {p:7, q:"07) No exame por contato, a indicação correspondente à superfície de apoio do cabeçote é:", o:["Pico inicial", "Ruído", "Ganho", "Nenhuma das respostas está correta."], r:0},
+    {p:7, q:"08) Muitas indicações de pouca altura na tela podem ser causadas por:", o:["Trincas", "Bolhas de gás", "Porosidade fina", "Inclusões"], r:2},
+    {p:7, q:"09) O princípio da ressonância ultrassônica é geralmente usado para:", o:["Detectar grandes descontinuidades.", "Detectar porosidade.", "Medir a espessura da parede.", "Nenhuma das respostas citadas está correta."], r:2},
+    {p:7, q:"10) A principal finalidade dos blocos de referência é:", o:["Ajudar a obter o máximo de reflexão posterior.", "Obter a maior sensibilidade possível.", "Reproduzir as condições da peça, com ou sem defeitos.", "Nenhuma das respostas está correta."], r:2},
+    {p:7, q:"11) No uso de ondas superficiais, a presença de óleo ou sujeira na superfície:", o:["Não interferirá no exame.", "Causará atenuação e o aparecimento de indicações.", "Atenuará o som, porém sem provocar indicação.", "Impedirá o deslocamento do som."], r:1},
+    {p:7, q:"12) No exame pelo método de imersão, o acoplante geralmente utilizado é:", o:["Óleo", "Glicerina", "Álcool", "Água"], r:3},
+    {p:7, q:"13) O material piezelétrico do cabeçote:", o:["Converte energia elétrica em mecânica.", "Converte energia mecânica em elétrica.", "Converte energia elétrica em mecânica e vice-versa.", "Nenhuma das respostas está correta."], r:2},
+    {p:7, q:"14) A qual das seguintes frequências corresponde o comprimento de onda mais curto?", o:["1 megaciclo", "5 megaciclos", "10 megaciclos", "25 megaciclos"], r:3},
+    {p:7, q:"15) O ângulo de incidência é............ângulo de reflexão.", o:["Igual ao", "Maior do que o", "Menor do que o", "Nenhuma das respostas está correta."], r:0},
+    {p:7, q:"16) No método de imersão, o operador pode remover a imagem da camada de água pelo:", o:["Ajuste do zero", "Ajuste da escala", "Controle de rejeição", "Controle do comprimento do pulso"], r:0},
+    {p:7, q:"17) Uma frequência de 100.000 ciclos por segundo também pode ser designada por:", o:["0,1 quilociclos", "10 quilociclos", "100 quilociclos", "100 megaciclos"], r:2},
+    {p:7, q:"18) Um cabeçote de 25 megaciclos é adequado:", o:["Para exame de peças pelo método de imersão", "Para exame por contato com ondas superficiais", "Para feixe angular em tubos de aço", "Para feixe normal em lingotes de alumínio"], r:0},
+    {p:7, q:"19) Os furos de referência para blocos padrão de alumínio possuem:", o:["Fundos côncavos", "Fundos convexos", "Fundos cônicos", "Fundo plano"], r:3},
+    {p:7, q:"20) A perda gradual da energia sônica que ocorre na propagação é denominada:", o:["Reflexão", "Refração", "Atenuação", "Reprodutibilidade"], r:2},
+    {p:7, q:"21) O termo usado para descrever um grande número de pequenas indicações (grama) é:", o:["Ressonância", "Ruído ou grama", "Reflexões posteriores múltiplas", "Reflexões anteriores múltiplas"], r:1},
+    {p:7, q:"22) Dois feixes com frequências diferentes no mesmo meio. A velocidade de propagação:", o:["Da frequência mais alta é maior", "Da frequência mais baixa é maior", "É a mesma para os dois feixes", "Depende da densidade crítica do meio."], r:2},
+    {p:7, q:"23) As ondas ultrassônicas são transmitidas na forma de grupos sucessivos de ondas:", o:["No método de exame por pulso-eco", "No método de exame por ressonância", "No método de exame por ondas contínuas", "Nenhuma das respostas está correta."], r:0},
+    {p:7, q:"24) Blocos de metal que contém um ou mais furos para simular descontinuidades são:", o:["Purificadores", "Colimadores", "Blocos de referência", "Anguladores de plano simples"], r:2},
+    {p:7, q:"25) O exame com frequências variáveis para determinar espessura é denominado:", o:["Exame por pulso-eco", "Exame por ondas de Rayleigh", "Exame por imersão", "Exame por ressonância"], r:3},
+    {p:7, q:"26) Descontinuidade paralela à superfície a 3 polegadas num bloco de 6. Mais fácil detectar:", o:["Usando um cabeçote angular", "Usando um cabeçote normal", "Com ondas superficiais", "Com ondas de Lamb"], r:1},
+    {p:7, q:"27) Uma descontinuidade não produzirá indicação na tela se for usado o exame:", o:["Com cabeçote normal", "Com cabeçote angular", "Com ondas superficiais", "Pelo método de transparência"], r:3},
+    {p:7, q:"28) Qual a frequência da onda que perde mais energia em granulação grosseira?", o:["10,0 megaciclos", "5,0 megaciclos", "2,25 megaciclos", "1,0 megaciclo"], r:0},
+    {p:7, q:"29) Indicações no exame por ondas superficiais podem resultar de:", o:["Descontinuidades superficiais", "Óleo na superfície", "Sujeira na superfície", "Todas as respostas estão corretas"], r:3},
+    {p:7, q:"30) Cabeçotes com cristal em cunha plástica para contato são usados para:", o:["Feixe normal", "Feixe em ângulo com a superfície", "Técnica de imersão", "Nenhuma das respostas."], r:1},
+    {p:7, q:"31) Um cabeçote que contém três ou mais cristais separados é denominado:", o:["Mosaico", "Duplo cristal", "Sanduíche de cristal", "Nenhuma das respostas."], r:0},
+    {p:7, q:"32) Adaptadores curvos para focalizar o feixe são denominados:", o:["Purificadores", "Lentes acústicas", "Anguladores", "Adaptadores de feixe inclinado"], r:1},
+    {p:7, q:"33) Após atravessar interface de metais diferentes, a mudança de direção chama-se:", o:["Ângulo de refração", "Ângulo de reflexão", "Ângulo de rarefação", "Ângulo de incidência"], r:0},
+    {p:7, q:"34) O processo para comparar um instrumento com um padrão é:", o:["Varredura", "Calibração", "Angulação", "Correção distância-amplitude"], r:1},
+    {p:7, q:"35) Tubo de vidro a vácuo para reproduzir imagens em tela fluorescente:", o:["Tubo de raios catódicos", "Tubo amplificador", "Tubo de varredura", "Tubo pulsador"], r:0},
+    {p:7, q:"36) Agrupamento de cristais num cabeçote atuando como um único transdutor:", o:["Purificador", "Mosaico de cristal", "Cristal de focalização", "Manipulador"], r:1},
+    {p:7, q:"37) O espalhamento do feixe causado por reflexão em superfície altamente irregular é:", o:["Angulação", "Dispersão", "Refração", "Rarefação"], r:1},
+    {p:7, q:"38) O ângulo de reflexão:", o:["É igual ao ângulo de refração", "É igual ao ângulo de incidência", "Depende da frequência", "Depende do acoplamento"], r:1},
+    {p:7, q:"39) A inclinação da superfície refletora em relação à superfície de exame é:", o:["Ângulo de incidência", "Ângulo de refração", "A orientação da descontinuidade", "Nenhuma das respostas."], r:2},
+    {p:7, q:"40) Um fluxo de curta duração e intenso de energia elétrica alternada é um:", o:["Pulso", "Onda contínua", "Onda ultrassônica", "Pico de voltagem CC"], r:0}
+
+    // PROVA 08 
+    {p:8, q:"01) No exame por meio de ultrassom, a duração de um pulso é denominada:", o:["Forma do pulso", "Amplitude do pulso", "Comprimento do pulso ou largura do pulso", "Nenhuma das respostas está correta"], r:2},
+    {p:8, q:"02) Uma onda muda sua direção de propagação ao atingir o limite do meio em que se desloca. Este fenômeno é denominado:", o:["Angulação", "Reflexão", "Divergência", "Rarefação"], r:1},
+    {p:8, q:"03) Ao incidir com ângulo diferente de 90 graus na interface que separa dois meios diferentes, a mudança de direção no segundo meio é:", o:["Refração", "Reflexão", "Rarefação", "Angulação"], r:0},
+    {p:8, q:"04) O método de medir espessura com ondas de frequência variável produzidas por um transdutor é:", o:["Exame por magnetoestricção", "Exame por ressonância", "Exame por transparência", "Exame por feixe angular"], r:1},
+    {p:8, q:"05) No exame por ressonância, a frequência fundamental ocorre quando a espessura da peça é:", o:["Igual ao comprimento de onda", "A metade do comprimento de onda", "Duas vezes o comprimento de onda", "A quarta parte do comprimento de onda"], r:1},
+    {p:8, q:"06) A extremidade maior de um tubo de raios catódicos que se torna luminosa com feixe de elétrons é:", o:["Canhão eletrônico", "Contador eletrônico", "Amplificador eletrônico", "Tela do tubo de raios catódicos"], r:3},
+    {p:8, q:"07) Qual das seguintes maneiras de vibração produz pulsos de menor comprimento de onda numa dada frequência?", o:["Ondas de corte", "Ondas superficiais", "Ondas de compressão", "Ondas longitudinais"], r:1},
+    {p:8, q:"08) Qual modo possui maior poder de penetração em peças metálicas de granulação grosseira?", o:["De corte", "Transversal", "Longitudinal", "Todas têm o mesmo poder"], r:2},
+    {p:8, q:"09) Exame onde o feixe é transmitido perpendicularmente à superfície (face do cristal paralela à peça):", o:["Exame com feixe normal", "Exame com feixe angular", "Exame com ondas superficiais", "Todas as respostas estão corretas"], r:0},
+    {p:8, q:"10) Método onde o som é emitido por um cabeçote e recebido por outro na superfície oposta:", o:["Exame com ondas superficiais", "Exame com cabeçote angular", "Exame com cabeçote normal", "Exame por transparência"], r:3},
+    {p:8, q:"11) Um dispositivo que transforma energia de uma forma em outra é denominado:", o:["Emissor", "Transdutor", "Transmissor", "Transferidor"], r:1},
+    {p:8, q:"12) A distância de certo ponto de uma onda ao ponto correspondente da onda seguinte é:", o:["Frequência", "Velocidade", "Comprimento de onda", "Duração do pulso"], r:2},
+    {p:8, q:"13) A distância que uma onda percorre na unidade de tempo em um material é a:", o:["Taxa de recuperação", "Taxa de repetição", "Resposta ultrassônica", "Velocidade"], r:3},
+    {p:8, q:"14) A substância que reduz a tensão superficial de um líquido é denominada:", o:["Acoplante", "Agente umectante", "Amortecedor", "Nenhuma das respostas"], r:1},
+    {p:8, q:"15) Os transdutores geralmente usados em cabeçotes para ultrassom utilizam:", o:["Princípios de conversão de modo", "Princípios piezelétricos", "Princípios de magnetoestricção", "Nenhuma das respostas"], r:1},
+    {p:8, q:"16) Estabilidade elétrica/mecânica e insolubilidade são vantagens do cristal de:", o:["Titanato de bário", "Sulfato de lítio", "Sais de Rochelle", "Quartzo"], r:3},
+    {p:8, q:"17) A fórmula da Lei de Snell (sen a/vel a = sen b/vel b) é usada para determinar:", o:["Velocidade da fase", "Relações angulares", "A impedância acústica", "A quantidade de energia refletida"], r:1},
+    {p:8, q:"18) A quantidade de energia refletida por uma descontinuidade dependerá de:", o:["Tipo da descontinuidade", "Tamanho da descontinuidade", "Orientação da descontinuidade", "De todos os fatores citados acima"], r:3},
+    {p:8, q:"19) Se o primeiro material tem impedância maior e a velocidade é igual nos dois meios, o ângulo de refração será:", o:["Maior que o ângulo crítico", "Igual ao ângulo de incidência", "Maior que o ângulo de incidência", "Menor que o ângulo de incidência"], r:1},
+    {p:8, q:"20) O produto da velocidade do som pela densidade do material é a:", o:["Refração", "Coeficiente de Poisson", "Impedância acústica", "Constante elástica"], r:2},
+    {p:8, q:"21) Se o feixe incidir na parede lateral devido à divergência antes de atingir o fundo, ocorre:", o:["Perda da indicação de entrada", "Reflexões múltiplas do fundo", "Conversão de modo (Long. para Trans.)", "Reflexões múltiplas de entrada"], r:2},
+    {p:8, q:"22) Em peças forjadas de grande tamanho, o exame geralmente é feito com:", o:["Feixe normal", "Feixe angular", "Feixe normal e angular", "Alta e baixa frequência"], r:2},
+    {p:8, q:"23) Resposta onde a amplitude aumenta proporcionalmente à área da descontinuidade:", o:["Faixa de sensibilidade", "Faixa de seletividade", "Faixa de linearidade", "Faixa de resolução"], r:2},
+    {p:8, q:"24) Antes de examinar um forjado com carepa fina e aderente, é necessário:", o:["Decapar a peça", "Usinar a superfície", "Remover a carepa frouxa", "Remover completamente o óxido"], r:2},
+    {p:8, q:"25) Quando um feixe incide numa interface alumínio-água, o ângulo de reflexão:", o:["É igual ao ângulo de incidência", "É 0,256 vezes o ângulo de incidência", "É quatro vezes maior", "É a metade"], r:0},
+    {p:8, q:"26) Frequência que proporciona melhor penetração em aço de 300mm com granulação grosseira:", o:["1,0 megahertz", "2,25 megahertz", "5,0 megahertz", "10,0 megahertz"], r:0},
+    {p:8, q:"27) O sistema B-Scan mostrará:", o:["Vista em planta (área e posição)", "Altura da indicação e profundidade", "Secção transversal (superfícies e profundidade do furo)", "Nenhuma das respostas"], r:2},
+    {p:8, q:"28) Sobre ondas transversais:", o:["Partículas se movem normalmente à direção de propagação; velocidade é ~metade da longitudinal.", "Sensibilidade alta devido à baixa atenuação na água.", "Alta eficiência de acoplamento por serem pouco sensíveis.", "Nenhuma das respostas"], r:0},
+    {p:8, q:"29) Aplicação comum de ondas transversais:", o:["Medição de chapas finas", "Detecção de descontinuidades em soldas", "Laminares em chapas grossas", "Propriedades elásticas"], r:1},
+    {p:8, q:"30) Erros significativos na medida de espessura ocorrem se:", o:["A frequência variar constante", "A água for usada como acoplante", "O valor da velocidade de propagação estiver incorreto", "Nenhuma das respostas"], r:2},
+    {p:8, q:"31) Melhor método para detectar descontinuidades na zona de fusão de solda:", o:["Imersão com ondas superficiais", "Feixe angular com ondas transversais", "Contato angular com ondas superficiais", "Contato normal com ondas longitudinais"], r:1},
+    {p:8, q:"32) O instrumento de ressonância para medir espessura emprega ondas:", o:["De Lamb", "Transversais", "Longitudinais", "Superficiais"], r:2},
+    {p:8, q:"33) Aparelho onde pulsos representam energia refletida em função do tempo/percurso:", o:["A-Scan", "B-Scan", "C-Scan", "Onda contínua"], r:0},
+    {p:8, q:"34) Outro nome para exame por ressonância é:", o:["Pulso-eco", "Transparência", "Onda contínua", "Ondas superficiais"], r:2},
+    {p:8, q:"35) Interface água-aço, ângulo de incidência na água 7°. Modo principal no aço:", o:["Longitudinal e transversal", "Longitudinal", "Transversal", "Ondas superficiais"], r:0},
+    {p:8, q:"36) O número de pulsos produzidos num dado período de tempo é a:", o:["Frequência de repetição de pulso (PRF)", "Tempo de recuperação", "Comprimento do pulso", "Frequência do aparelho"], r:0},
+    {p:8, q:"37) Componente que coordena as ações dos demais componentes e o tempo:", o:["Circuito marcador", "Receptor", "Sincronizador (relógio)", "Tubo de raios catódicos"], r:2},
+    {p:8, q:"38) Componente que produz a voltagem que ativa o cabeçote:", o:["Amplificador", "Receptor", "Sincronizador", "Pulsador"], r:3},
+    {p:8, q:"39) Ângulo de refração do feixe inclinado da água para o metal será função:", o:["Impedâncias acústicas", "Frequência das ondas", "Velocidades relativas nos dois meios", "Densidades"], r:2},
+    {p:8, q:"40) Componente que produz os sinais na tela usados para medir distâncias:", o:["Sincronizador", "Circuito de varredura", "Circuito marcador (ou de tempo)", "Circuito receptor"], r:2}
+
+    // PROVA 09 
+    {p:9, q:"01) A maioria dos aparelhos para exame por meio de ultrassom, do tipo pulso-eco, usa:", o:["Apresentação do tipo A-Scan", "Apresentação do tipo B-Scan", "Apresentação do tipo C-Scan", "Dispositivos de leitura automática."], r:0},
+    {p:9, q:"02) A tela que mostrará uma vista plana (planta) da peça e de seus defeitos é a:", o:["Apresentação do tipo A-Scan", "Apresentação do tipo B-Scan", "Apresentação do tipo C-Scan", "Dispositivo de leitura automática"], r:2},
+    {p:9, q:"03) O ângulo de incidência que corresponde a um ângulo de refração de 90 graus é o:", o:["Ângulo de reflexão máxima", "Ângulo de refração", "Ângulo crítico", "Nenhuma das respostas está correta"], r:2},
+    {p:9, q:"04) Na interface água-alumínio (imersão), o 1º ângulo crítico (longitudinais) é de aprox.:", o:["8 graus", "14 graus", "26 graus", "32 graus"], r:1},
+    {p:9, q:"05) Ondas onde as partículas se deslocam paralelamente à direção de propagação são:", o:["Ondas de corte", "Ondas de Lamb", "Ondas de Rayleigh", "Ondas longitudinais"], r:3},
+    {p:9, q:"06) Indique o modo de vibração que é amortecido mais rapidamente no método de imersão:", o:["Ondas superficiais", "Ondas longitudinais", "Ondas transversais", "Ondas de corte"], r:0},
+    {p:9, q:"07) Como se movimenta um conjunto de partículas estimulado por ondas transversais?", o:["Paralela à direção de propagação", "Transversal à direção de propagação", "Trajetória elíptica na superfície", "Polarizado a 45 graus"], r:1},
+    {p:9, q:"08) Onda longitudinal no alumínio (V=900.000 cm/s) com f=2 MHz. O comprimento de onda é:", o:["6,35 pés", "4,5 milímetros", "3,10 polegadas", "30.000 angstroms"], r:1},
+    {p:9, q:"09) Equipamento verificado em bloco de 40 mm fica habilitado para a faixa de:", o:["30 a 60 mm", "30 a 50 mm", "20 a 40 mm", "20 a 50 mm"], r:3},
+    {p:9, q:"10) Medida em inox (V=5660) com aparelho ajustado para carbono (V=5920) deu 40mm. Espessura real:", o:["37,5 mm", "38,8 mm", "38,2 mm", "39,2 mm"], r:2},
+    {p:9, q:"11) À medida que a frequência aumenta, o ângulo da divergência do feixe:", o:["Diminui", "Varia uniformemente", "Permanece inalterado", "Aumenta"], r:0},
+    {p:9, q:"12) No uso de cabeçotes com sapatas plásticas, há uma desvantagem quanto à:", o:["Ao desgaste do cristal", "Adaptação a superfícies curvas", "Facilidade de transmissão", "Sensibilidade"], r:3},
+    {p:9, q:"13) Em qual dos materiais relacionados abaixo a velocidade do som é menor?", o:["Água", "Ar", "Aço", "Alumínio"], r:1},
+    {p:9, q:"14) Feixe longitudinal da água para o aço a 5°. O ângulo refratado da transversal é:", o:["Maior que o da longitudinal", "Igual ao da longitudinal", "Menor que o da longitudinal", "Nem sempre existe"], r:2},
+    {p:9, q:"15) Em qual dos materiais relacionados abaixo a velocidade de propagação do som é maior?", o:["Água", "Aço inoxidável", "Alumínio", "Ar"], r:2},
+    {p:9, q:"16) Um cristal de quartzo para feixe normal de 10 MHz tem espessura aproximada de:", o:["0,500 polegadas", "0,050 polegadas", "0,012 polegadas", "Espessura variável"], r:2},
+    {p:9, q:"17) Qual material abaixo NÃO apresenta propriedades piezelétricas?", o:["Níquel-A", "Quartzo", "Titanato de bário", "Sulfato de lítio"], r:0},
+    {p:9, q:"18) No aço, a velocidade do som é maior em qual dos seguintes modos de vibração?", o:["De corte", "Onda superficial", "É a mesma em todos", "Longitudinal"], r:3},
+    {p:9, q:"19) A impedância acústica é:", o:["Determinada pela Lei de Snell", "Usada para ressonância", "O produto da densidade pela velocidade", "Usada para calcular ângulo de reflexão"], r:2},
+    {p:9, q:"20) Diagrama com figuras geométricas e flechas indicando o percurso do sinal é o:", o:["Diagrama esquemático", "Diagrama de blocos", "Diagrama impresso", "Nenhuma das respostas"], r:1},
+    {p:9, q:"21) Vazio causado por gás retido no interior do metal durante a solidificação:", o:["Bolhas de gás", "Escamas", "Gotas frias", "Rechupe"], r:0},
+    {p:9, q:"22) Descontinuidade em fundidos por respingos ou junção de metal líquido frio:", o:["Bolhas de gás", "Escamas", "Gotas frias", "Rechupe"], r:2},
+    {p:9, q:"23) Tensão máxima sem deformação permanente após a remoção da carga:", o:["Meio elástico", "Coeficiente de Poisson", "Módulo de Young", "Limite elástico"], r:3},
+    {p:9, q:"24) A relação entre as velocidades de propagação do som em dois materiais é o:", o:["Relação de Poisson", "Impedância acústica", "Módulo de Young", "Índice de refração"], r:3},
+    {p:9, q:"25) Expansão/contração de material magnético sob campo magnético variável:", o:["Refração", "Rarefação", "Piezeletricidade", "Magnetoestricção"], r:3},
+    {p:9, q:"26) Escala sobre a tela que permite medida rápida de distância:", o:["Linha de varredura", "Escala de tempo", "Pulso inicial", "Marcador"], r:3},
+    {p:9, q:"27) Relação entre tensão e deformação dentro do limite elástico:", o:["Coeficiente de elasticidade", "Índice de refração", "Tensão elástica", "Alongamento"], r:0},
+    {p:9, q:"28) Fator que determina a quantidade de energia refletida na interface:", o:["Índice de refração", "Módulo de Young", "Impedância acústica específica", "Frequência"], r:2},
+    {p:9, q:"29) Movimento do cabeçote ao longo da superfície (manual ou mecânico):", o:["Atenuação", "Varredura", "Angulação", "Ressonância"], r:1},
+    {p:9, q:"30) A equação correta do comprimento de onda (λ) é:", o:["λ = velocidade / frequência", "λ = velocidade x frequência", "λ = Z x velocidade x frequência", "λ = frequência + velocidade"], r:0},
+    {p:9, q:"31) O que ocorre quando o feixe atinge a interface de dois materiais dissimilares?", o:["Reflexão", "Refração", "Conversão de modo", "Reflexão, Refração e Conversão de modo"], r:3},
+    {p:9, q:"32) Capacidade de detectar descontinuidades próximas da superfície de exame:", o:["Sensibilidade", "Resolução", "Penetração", "Segregação"], r:1},
+    {p:9, q:"33) A propagação de ondas superficiais em peça imersa em água é limitada a:", o:["25 mm", "250 mm", "500 mm", "1.250 mm"], r:0},
+    {p:9, q:"34) Material piezelétrico com maior eficiência na transformação de voltagem em vibração:", o:["Quartzo", "Óxido de Prata", "Titanato de Bário", "Sulfato de Lítio"], r:2},
+    {p:9, q:"35) Sobre a divergência do feixe, é correto afirmar que:", o:["Diminui se o diâmetro diminui", "Aumenta se a frequência aumenta", "Diminui se a frequência aumenta", "Aumenta se a frequência ou diâmetro diminuem"], r:3},
+    {p:9, q:"36) A frequência fundamental de um cristal de quartzo depende principalmente da:", o:["Espessura do cristal", "Comprimento do pulso", "Amplificação do aparelho", "Nenhuma das respostas"], r:0},
+    {p:9, q:"37) A velocidade acústica é determinada primeiramente por:", o:["Densidade", "Elasticidade", "Impedância acústica", "Densidade e elasticidade"], r:3},
+    {p:9, q:"38) A inspeção de fundidos frequentemente é impraticável porque:", o:["Linhas de fluxo uniformes", "Grãos muito finos", "Peças de granulação grosseira", "Defeitos ao acaso"], r:2},
+    {p:9, q:"39) A fórmula do ângulo de divergência (alfa) é:", o:["sen α = f x λ", "sen α/2 = 1,22 x λ / D", "sen α = D x 2 / 4λ", "sen α x D = f x λ"], r:1},
+    {p:9, q:"40) O poder de resolução de um cabeçote é diretamente proporcional:", o:["Ao coeficiente elétrico", "À largura de sua faixa (banda)", "À forma convexa", "À forma côncava"], r:1}
+
+    // PROVA 10 
+    {p:10, q:"01) Quando uma peça a ser examinada possui superfície irregular, é aconselhável empregar:", o:["Cabeçote de frequência menor e acoplantes mais viscosos", "Cabeçotes de frequência menor e acoplantes menos viscosos", "Cabeçote de frequência maior e acoplantes menos viscosos", "Cabeçotes de frequência maior e acoplantes mais viscosos"], r:0},
+    {p:10, q:"02) No A-Scan, a linha horizontal marcada pelo movimento uniforme do feixe de elétrons é a:", o:["Onda quadrada", "Linha de varredura", "Escala DGS", "Marcador"], r:1},
+    {p:10, q:"03) Qual frequência sofre a MAIOR atenuação ao propagar-se num bloco de aço?", o:["1,0 MHz", "2,25 MHz", "5,0 MHz", "10,0 MHz"], r:3},
+    {p:10, q:"04) Ondas que se propagam em superfícies curvas sem cantos vivos, com pouca ou nenhuma reflexão das curvas:", o:["Ondas superficiais", "Ondas transversais", "Ondas de corte", "Ondas longitudinais"], r:0},
+    {p:10, q:"05) No exame por contato (cabeçote normal), a refração causada por ........ pode gerar ondas superficiais falsas.", o:["Descontinuidade irregular", "Acoplante", "Marcas de usinagem", "Campo magnético"], r:2},
+    {p:10, q:"06) Após varrer uma peça com um cabeçote grande, o que se usa para localizar precisamente a descontinuidade?", o:["Mapa da peça", "Purificador", "Cabeçote de cristal pequeno", "Colimador de cristal"], r:2},
+    {p:10, q:"07) A técnica da ressonância também é denominada:", o:["Técnica do pulso-eco", "Técnica da transparência", "Técnica do diapasão", "Técnica da onda contínua"], r:3},
+    {p:10, q:"08) Quanto maior a diferença de impedância entre dois materiais, a energia transmitida pela interface:", o:["É maior", "É menor", "Permanece invariável", "Pode aumentar ou diminuir"], r:1},
+    {p:10, q:"09) Ondas de baixa frequência geralmente não são usadas em espessuras reduzidas porque:", o:["Sofrem atenuação rápida", "Comprimentos de onda inadequados", "Provocam fadiga na peça", "Pouca resolução na região próxima à superfície"], r:3},
+    {p:10, q:"10) No exame por imersão, o acessório onde o cabeçote é conectado via cabo é o:", o:["Colimador de cristal", "Tubo de pesquisa ou varredura", "Unidade de jato", "Purificador"], r:1},
+    {p:10, q:"11) No exame por imersão, a camada de água entre o cabeçote e a peça:", o:["Deve ser a menor possível", "Deve ser a maior possível", "Deve ser a mesma utilizada na calibração", "Não interferirá com o teste"], r:2},
+    {p:10, q:"12) Indique o material no qual a propagação do som ocorre com a MENOR perda de energia:", o:["Alumínio forjado", "Lingote de aço", "Lingote de alumínio", "Alumínio fundido"], r:0},
+    {p:10, q:"13) As indicações provenientes de superfícies curvas na tela do aparelho serão:", o:["Largas", "Estreitas", "De um único pico", "Muito picadas"], r:0},
+    {p:10, q:"14) Defeitos muito próximos da superfície podem não ser detectados devido:", o:["À atenuação", "À refração", "Ao tempo de recuperação do sistema", "Ao efeito do campo próximo"], r:2},
+    {p:10, q:"15) Para tubos com diâmetro menor que o transdutor, usa-se para confinar o feixe:", o:["Unidade de jato", "Purificador", "Colimador", "Angulador"], r:2},
+    {p:10, q:"16) A velocidade máxima possível de varredura é função principalmente da:", o:["Viscosidade do acoplante", "Frequência de repetição de pulso (PRF)", "Frequência do cabeçote", "Persistência da tela"], r:1},
+    {p:10, q:"17) Qual apresentação é frequentemente substituída por registro permanente (documento)?", o:["Apresentação A-Scan", "Apresentação B-Scan", "Apresentação C-Scan", "Nenhuma das respostas"], r:2},
+    {p:10, q:"18) Para examinar uma chapa por imersão, deve-se assegurar:", o:["Camada de água com maior espessura possível", "Camada de água com espessura constante", "Que o feixe atinja a superfície", "Ângulo fixo de 5 graus"], r:1},
+    {p:10, q:"19) Usando cabeçote angular em chapa, pode ocorrer a NÃO detecção de:", o:["Trincas perpendiculares ao feixe", "Inclusões ao acaso", "Pequenas descontinuidades", "Trincas paralelas à superfície"], r:3},
+    {p:10, q:"20) A fórmula sen a / vel a = sen b / vel b é denominada:", o:["Razão da impedância", "Conversão de fase", "Conversão de Fresnel", "Lei de Snell"], r:3},
+    {p:10, q:"21) Ultrassom é o som com frequência acima de:", o:["30 Hz", "1600 Hz", "20.000 Hz", "1 MHz"], r:2},
+    {p:10, q:"22) O ensaio por ultrassom detecta principalmente:", o:["Dureza do material", "Descontinuidades internas", "Mordeduras superficiais", "Nenhuma das respostas"], r:1},
+    {p:10, q:"23) As ondas de ultrassom são:", o:["Ondas elétricas", "Ondas eletromagnéticas", "Ondas mecânicas", "Ondas eletro luminosas"], r:2},
+    {p:10, q:"24) Os transdutores normais detectam principalmente:", o:["Defeitos planos, paralelos à superfície", "Defeitos planos, perpendiculares à superfície", "Defeitos planos oblíquos", "Defeitos em soldas de ângulo"], r:0},
+    {p:10, q:"25) É uma vantagem do ultrassom:", o:["Acesso a ambas as superfícies", "Grande poder de penetração", "Não requer preparação de superfície", "Nenhuma das respostas"], r:1},
+    {p:10, q:"26) Denomina-se frequência:", o:["A altura da onda", "A velocidade de propagação", "O número de oscilações por intervalo de tempo", "A distância entre dois pontos homólogos"], r:2},
+    {p:10, q:"27) Num líquido, o único modo de vibração que pode existir é:", o:["Transversal", "Longitudinal", "Elíptica", "Não existem vibrações"], r:1},
+    {p:10, q:"28) Entre dois transdutores de mesma frequência, o de maior diâmetro terá:", o:["Maior campo próximo", "Menor campo próximo", "Maior divergência", "Maior comprimento de onda"], r:0},
+    {p:10, q:"29) Ondas longitudinais são aquelas que:", o:["Realizam esforço de cisalhamento", "Vibram na mesma direção de propagação", "Vibram em direção transversal", "Possuem menor velocidade"], r:1},
+    {p:10, q:"30) Qual frequência corresponde ao MENOR comprimento de onda?", o:["500 KHz", "0,5 MHz", "2,0 MHz", "4,0 MHz"], r:3},
+    {p:10, q:"31) Os transdutores ultrassônicos utilizam o princípio da:", o:["Magnetoestricção", "Conversão de modo", "Piezoeletricidade", "Transmissão de calor"], r:2},
+    {p:10, q:"32) O método que utiliza apenas um cabeçote e ondas em forma de pulsos é:", o:["Transparência", "Pulso-eco", "Ressonância", "Trigonométrico"], r:1},
+    {p:10, q:"33) Se grande parte da onda é refletida ao atravessar perpendicularmente uma interface:", o:["Impedância é pequena", "Impedância é grande", "Não existe diferença de impedância", "Não há relação"], r:1},
+    {p:10, q:"34) Com cabeçote angular, o eco que aparece na tela corresponde:", o:["À espessura da peça", "À profundidade", "À distância percorrida pelo som", "À ausência de descontinuidade"], r:2},
+    {p:10, q:"35) No A-Scan normal, a distância entre o pulso inicial e a primeira reflexão indica:", o:["Tamanho da descontinuidade", "Espessura ou profundidade", "Ausência de defeitos", "Ausência de acoplante"], r:1},
+    {p:10, q:"36) Onda de 4 MHz no aço (v=6000 m/s) tem comprimento de onda de:", o:["2 mm", "1,5 mm", "4 mm", "3 mm"], r:1},
+    {p:10, q:"37) Um outro nome para zona de Fresnel é:", o:["Zona de Fraunhofer", "Campo próximo", "Campo longínquo", "Zona morta"], r:1},
+    {p:10, q:"38) Por que a inspeção de fundidos é difícil?", o:["Estrutura grosseira causa atenuação e ruído", "Requer dois transdutores", "Defeitos são pequenos demais", "Blocos são pesados"], r:0},
+    {p:10, q:"39) Habilidade em detectar ecos de pequenas descontinuidades é a:", o:["Resolução", "Sensibilidade", "Definição", "Ganho"], r:1},
+    {p:10, q:"40) Em qual zona a densidade de energia é mais intensa e causa interferência?", o:["Campo longínquo", "Campo próximo", "Zona morta", "Zona de Snell"], r:1}
+
+    // PROVA 11 
+    {p:11, q:"01) A velocidade do som nos materiais é primeiramente dependente:", o:["Do comprimento do pulso sônico", "Da frequência", "Do material e do modo de vibração", "Nenhuma das alternativas"], r:2},
+    {p:11, q:"02) Para detectar defeitos planares e paralelos à superfície, qual método é mais usado?", o:["Feixe angular", "Transmissão", "Feixe reto ou longitudinal", "Transparência"], r:2},
+    {p:11, q:"03) O líquido acoplante é necessário entre o cristal e a peça porque:", o:["Lubrifica o transdutor", "O ar impede a transmissão da vibração", "O cristal não vibra sem líquido", "Completa o circuito elétrico"], r:1},
+    {p:11, q:"04) A superfície limite entre o metal base e uma descontinuidade forma:", o:["Uma interface", "Um eco espúrio", "Um eco de reflexão", "As alternativas (a) e (c) são possíveis"], r:3},
+    {p:11, q:"05) Para permitir o acoplamento acústico do transdutor na peça, devemos:", o:["Usinar a superfície", "Pressionar fortemente o transdutor", "Utilizar líquido acoplante", "Preparar adequadamente a superfície"], r:2},
+    {p:11, q:"06) Ecos de baixa amplitude em toda a tela em peças de granulação grosseira são chamados:", o:["Ecos de indicações", "Ecos espúrios (ruído)", "Descontinuidades", "Granulometria"], r:1},
+    {p:11, q:"07) O fenômeno da divergência do feixe de ultrassom é devido:", o:["À estrutura do material", "Ao afastamento da frente de ondas em relação ao transdutor", "À atenuação do som", "À variação da frequência"], r:1},
+    {p:11, q:"08) A dificuldade na obtenção e interpretação de registros no ensaio ultrassônico representa:", o:["Uma desvantagem do método", "Uma inverdade", "Característica apenas de campo", "Nenhuma das alternativas"], r:0},
+    {p:11, q:"09) Campo próximo de transdutor 10mm, 4MHz no aço (V=5900m/s) é aprox.:", o:["0,08 cm", "6,25 cm", "55,8 cm", "16 mm"], r:1},
+    {p:11, q:"10) Divergência de transdutor 12mm, 2MHz, V=6000m/s (sen θ = 1,08 x λ/D):", o:["2,5 graus", "40,5 graus", "16 graus", "37,5 graus"], r:2},
+    {p:11, q:"11) Na representação B-scan, a imagem na tela do aparelho:", o:["Representa a posição em dois eixos (x,y)", "Representa ecos de interfaces", "Representa o volume da secção da peça (perfil)", "Nenhuma das alternativas"], r:2},
+    {p:11, q:"12) A inspeção por ultrassom em materiais inoxidáveis austeníticos:", o:["Deve ser evitada (grande atenuação)", "Igual ao aço carbono", "Igual ao carbono + 6dB", "Evitada (impedância alta)"], r:0},
+    {p:11, q:"13) O critério de aceitação do ensaio por ultrassom deve estar baseado:", o:["No furo padrão de referência", "No bom senso do inspetor", "No procedimento, norma ou projeto", "As alternativas (b) e (c) são corretas"], r:2},
+    {p:11, q:"14) O comprimento do campo próximo pode ser calculado por:", o:["Diâmetro² / 4 x λ", "Velocidade / 2 x λ", "Diâmetro / 4 x λ", "Nenhuma das alternativas"], r:0},
+    {p:11, q:"15) Habilidade em detectar ecos de pequenas descontinuidades define a:", o:["Resolução", "Sensibilidade", "Definição", "Ganho"], r:1},
+    {p:11, q:"16) A razão entre o seno do ângulo de incidência e a velocidade no meio define:", o:["Lei de Snell", "Interferência ondulatória", "Divergência do feixe", "Comprimento do campo próximo"], r:0},
+    {p:11, q:"17) Qual das afirmativas abaixo é verdadeira?", o:["Bloco para ajustar escalas é o bloco de calibração", "Superfície ideal é lisa e plana", "Ondas superficiais são mais lentas que transversais", "Todas as alternativas são verdadeiras"], r:3},
+    {p:11, q:"18) O diagrama AVG ou DGS foi elaborado para estudar:", o:["Reflexão em superfícies planas", "Variação do ganho com a frequência", "Ganho na refletividade em pequenas descontinuidades a diversas profundidades", "Variação do diâmetro pela frequência"], r:2},
+    {p:11, q:"19) Teoricamente, a menor descontinuidade detectável deve ter dimensões:", o:["Maiores que metade de λ", "Maiores que metade do campo próximo", "No mínimo o furo do bloco Tipo 1", "No mínimo 1/4 de λ"], r:0},
+    {p:11, q:"20) Uma descontinuidade pequena posicionada no campo próximo:", o:["É de difícil análise", "Não pode ser detectada", "Terá comprimento menor que o real", "Detectada apenas se maior que 2λ"], r:0},
+    {p:11, q:"21) Os transdutores angulares geram ângulos:", o:["Iguais ao valor gravado", "Iguais ao valor gravado, válidos para o aço", "Menores que 90 graus", "As alternativas (a) e (c) são corretas"], r:1},
+    {p:11, q:"22) Qual dos cristais abaixo pode ser utilizado como cristal ultrassônico?", o:["Metaniobato de chumbo", "Titanato de bário", "Sulfato de lítio", "Todos acima"], r:3},
+    {p:11, q:"23) A diminuição da intensidade sonora ao longo do eixo central ao se afastar do cristal deve-se à:", o:["Atenuação sônica", "Anisotropia", "Interferência ondulatória", "Divergência do feixe"], r:3},
+    {p:11, q:"24) O comprimento de onda (λ) pode ser calculado pela:", o:["Frequência x Velocidade", "Frequência / Velocidade", "Velocidade / Frequência", "Densidade x Velocidade"], r:2},
+    {p:11, q:"25) Transdutor com dois cristais (um emite e outro recebe) chama-se:", o:["Normal", "Transversal", "Emissor-receptor", "Duplo-cristal"], r:3},
+    {p:11, q:"26) A velocidade longitudinal no aço é aproximadamente:", o:["O dobro das transversais", "5900 m/s", "1500 m/s", "As alternativas (a) e (b) são corretas"], r:3},
+    {p:11, q:"27) A impedância acústica de um material é usada para determinar:", o:["Ângulo de refração", "Atenuação interna", "Energia acoplada e refletida na interface", "Feixe espalhado"], r:2},
+    {p:11, q:"28) Qual das alternativas representa um modo de propagação?", o:["Ultrassom de alta frequência", "Onda de cisalhamento (transversal)", "Fator de dissipação", "Direção da energia inicial"], r:1},
+    {p:11, q:"29) Bastão em copo d'água parecendo desarticulado ilustra o fenômeno de:", o:["Reflexão", "Ampliação", "Refração", "Difração"], r:2},
+    {p:11, q:"30) Sobre cristal e frequência: quanto mais fino o cristal:", o:["Menor a frequência", "Maior a frequência", "Não há efeito", "Menor a atenuação"], r:1},
+    {p:11, q:"31) Onde ocorre divergência de feixe?", o:["Campo próximo", "Campo distante (campo longínquo)", "No cristal", "Na interface"], r:1},
+    {p:11, q:"32) Para detectar falhas planares paralelas à superfície, usa-se:", o:["Feixe de ângulo", "Transmissão direta", "Feixe reto", "Cristal duplo"], r:2},
+    {p:11, q:"33) Ondas de Rayleigh são mais influenciadas por descontinuidades localizadas:", o:["Perto ou na superfície", "1 λ abaixo da superfície", "3 λ abaixo da superfície", "6 λ abaixo da superfície"], r:0},
+    {p:11, q:"34) Qual lei calcula o ângulo de refração para ondas longitudinais e transversais?", o:["Lei do coeficiente de Poisson", "Lei de Snell", "Lei de Fresnel", "Lei de Charles"], r:1},
+    {p:11, q:"35) Qual varredura produz registro de áreas sobrepostas a uma vista em planta?", o:["A-scan", "B-scan", "C-scan", "D-scan"], r:2},
+    {p:11, q:"36) No alumínio e aço, a velocidade longitudinal é aprox. ....... a de cisalhamento.", o:["Igual", "Duas vezes", "Metade da", "Quatro vezes"], r:1},
+    {p:11, q:"37) Uma pequena explosão de energia elétrica alternada é chamada:", o:["Onda contínua", "Tensão contínua", "Onda ultrassônica", "Pulso"], r:3},
+    {p:11, q:"38) Onda que atinge limite e altera a direção dentro do mesmo meio é a:", o:["Divergência", "Impedância", "Angulação", "Reflexão"], r:3},
+    {p:11, q:"39) Estabilidade, insolubilidade e resistência ao envelhecimento são vantagens do:", o:["Sulfato de lítio", "Titanato de bário", "Quartzo", "Sais de Rochelle"], r:2},
+    {p:11, q:"40) Substância que reduz a tensão superficial de um líquido é um:", o:["Acoplamento", "Amortecedor", "Agente umectante", "Solvente"], r:2}
+    
+    // PROVA 12 
+    {p:12, q:"01) Indique a frequência que sofre a MENOR atenuação ao se propagar no aço:", o:["2,0 MHz", "0,5 MHz", "18 MHz", "6 MHz"], r:1},
+    {p:12, q:"02) Um defeito pode ser definido como:", o:["Qualquer condição anormal da peça", "Descontinuidade com volume > 3mm³", "Descontinuidade prejudicial à utilização da peça", "Qualquer mudança de estrutura"], r:2},
+    {p:12, q:"03) Quanto menor a espessura do cristal, maior é a sua frequência:", o:["Verdadeiro", "Falso"], r:0},
+    {p:12, q:"04) O movimento de um cabeçote ao longo de uma superfície é denominado:", o:["Atenuação", "Angulação", "Ressonamento", "Varredura"], r:3},
+    {p:12, q:"05) Trincas em fundidos e soldados ocorrem no processo de ........... devido à contração:", o:["Oxidação", "Solidificação", "Liquefação", "Fadiga"], r:1},
+    {p:12, q:"06) A refletividade de uma descontinuidade depende:", o:["Da velocidade do material", "Do tamanho e posição da descontinuidade", "Do material ensaiado", "Da temperatura do ensaio"], r:1},
+    {p:12, q:"07) Qual descontinuidade é impossível de detectar por Líquido Penetrante?", o:["Dobra de forjamento superficial", "Trinca de cratera", "Inclusões metálicas internas", "Trincas de retífica"], r:2},
+    {p:12, q:"08) Indicação definida, em meia lua e não profunda em forjado de alumínio é:", o:["Porosidade", "Trinca de tratamento térmico", "Indicação falsa", "Uma dobra"], r:3},
+    {p:12, q:"09) Qual onda possui o MAIOR comprimento de onda (mesma frequência e material)?", o:["Ondas longitudinais", "Ondas superficiais", "Ondas de Lamb", "Ondas de cisalhamento"], r:0},
+    {p:12, q:"10) Qual frequência proporcionaria a MELHOR resolução?", o:["1 megaciclo", "5 megaciclos", "10 megaciclos", "25 megaciclos"], r:3},
+    {p:12, q:"11) Se o ganho for reduzido em 6 dB, a amplitude/sensibilidade do sinal:", o:["Aumenta em 50%", "Diminui em 50%", "Aumenta em 100%", "Diminui em 100%"], r:1},
+    {p:12, q:"12) Onda longitudinal incidindo entre o 1º e 2º ângulo crítico gera no 2º meio:", o:["Só ondas longitudinais", "Ondas longitudinais e transversais", "Só ondas superficiais", "Só ondas transversais"], r:3},
+    {p:12, q:"13) Uma descontinuidade facilmente detectável terá:", o:["Meio comprimento de onda de diâmetro", "Um comprimento de onda de diâmetro", "Um quarto de comprimento de onda de diâmetro", "Muitos comprimentos de onda de diâmetro"], r:3},
+    {p:12, q:"14) Velocidade no Al = 612.500 cm/s. Para percorrer 25 mm, a onda levará:", o:["0,4 segundos", "40 micro-segundos", "0,004 micro-segundos", "4 micro-segundos"], r:3},
+    {p:12, q:"15) Sobre processos: (I) Líquido; (II) Tração; (III) Martelamento; (IV) Cilindros:", o:["(IV) é laminação", "(III) é forjamento", "(I) é fundição", "Todas estão corretas"], r:3},
+    {p:12, q:"16) Melhor método para detectar falha paralela a 50mm de profundidade em aço (100mm esp.):", o:["Ressonância", "Pulso-eco com ondas superficiais", "Pulso-eco com ondas longitudinais (feixe reto)", "Todos acima"], r:2},
+    {p:12, q:"17) Método que utiliza um transdutor para emitir e outro para receber:", o:["Pulso-eco", "Imersão", "Transparência", "Todos acima"], r:2},
+    {p:12, q:"18) Dos cristais abaixo, qual o melhor receptor de ondas ultrassônicas?", o:["Titanato de bário", "Sulfato de lítio", "Metaniobato de chumbo", "Quartzo"], r:1},
+    {p:12, q:"19) Candidatos a Nível 1 e 2 devem fazer quais exames?", o:["Geral, Específico e Prático", "Geral e Específico", "Específico e Prático", "Prático"], r:0},
+    {p:12, q:"20) Capacidade de distinguir descontinuidades próximas entre si:", o:["Penetração", "Segregação", "Sensibilidade", "Resolução"], r:3},
+    {p:12, q:"21) Num A-Scan, a linha de base horizontal representa:", o:["Quantidade de energia", "Tempo decorrido ou distância percorrida", "Distância do cabeçote", "Refletividade"], r:1},
+    {p:12, q:"22) A falta de paralelismo entre a superfície de entrada e a posterior:", o:["Dificulta detecção de falhas paralelas", "Indica porosidade", "Reduz o poder de penetração", "Pode causar a perda do eco de fundo"], r:3},
+    {p:12, q:"23) Indicação que representa a superfície oposta ao cabeçote na peça:", o:["Pico", "Eco de entrada", "Eco de fundo (parede posterior)", "Pulso"], r:2},
+    {p:12, q:"24) O distúrbio da visão de confusão de cores é:", o:["Miopia", "Daltonismo", "Hipermetropia", "Astigmatismo"], r:1},
+    {p:12, q:"25) Exame com frequências variáveis para determinar espessura:", o:["Ondas transversais", "Transparência", "Ressonância", "Imersão"], r:2},
+    {p:12, q:"26) O que determina a divergência do feixe sônico?", o:["Diâmetro e acoplante", "Taxa de repetição e frequência", "Impedância e velocidade", "Diâmetro e frequência do transdutor"], r:3},
+    {p:12, q:"27) Perda gradual de energia ultrassônica ao propagar-se na peça:", o:["Refração", "Atenuação", "Reflexão", "Imersão"], r:1},
+    {p:12, q:"28) Menor defeito detectável com V=6000 m/s e f=6 MHz (λ=1mm)?", o:["0,25 mm", "0,50 mm", "1,0 mm", "2,0 mm"], r:1},
+    {p:12, q:"29) Fator que determina a energia refletida na interface de dois materiais:", o:["Índice de refração", "Frequência", "Densidade", "Impedância acústica"], r:3},
+    {p:12, q:"30) A tela mostrará uma visão frontal (planta) da peça no mostrador:", o:["Todos abaixo", "B-Scan", "C-Scan", "A-Scan"], r:2},
+    {p:12, q:"31) No ensaio por ressonância, as indicações podem ser fundamentais ou:", o:["Harmônicas", "Antinodos", "Nodos", "Nenhuma acima"], r:0},
+    {p:12, q:"32) A velocidade das ondas ultrassônicas depende:", o:["Da frequência", "Do material em que se propaga", "Da duração do pulso", "Todas as respostas"], r:1},
+    {p:12, q:"33) Vantagem do duplo cristal sobre monocristal:", o:["Maior penetração", "Melhor sensibilidade perto da superfície", "Mais econômico", "Mais fácil de calibrar"], r:1},
+    {p:12, q:"34) Pré-requisitos para a certificação SNQC:", o:["Escolaridade, Treinamento e Experiência", "Aptidão física, Treinamento e Experiência", "Treinamento e Experiência", "Escolaridade, Aptidão física, Treinamento e Experiência"], r:3},
+    {p:12, q:"35) Comprimento de onda para f=2,25 MHz no Al (V transv.=3100 m/s):", o:["1,38 mm", "0,726 mm", "0,1525 mm", "0,655 mm"], r:0},
+    {p:12, q:"36) No Al laminado de 20mm, qual frequência possui maior resolução?", o:["1 MHz", "0,5 MHz", "4 MHz", "10 MHz"], r:3},
+    {p:12, q:"37) A atenuação de energia sônica depende:", o:["Do percurso sônico", "Da granulação", "Da frequência", "Todas as anteriores"], r:3},
+    {p:12, q:"38) Qual material é o MELHOR condutor de energia ultrassônica?", o:["Ferro fundido nodular", "Aço inox fundido", "Aço carbono forjado", "Ferro fundido cinzento"], r:2},
+    {p:12, q:"39) Qual das afirmativas abaixo é verdadeira?", o:["Frequência é inversamente proporcional à espessura do cristal", "Impedância é inv. proporcional à densidade", "Impedância é inv. proporcional à velocidade", "Frequência é diretamente proporcional à espessura"], r:0},
+    {p:12, q:"40) Frequência para λ=0,1mm com V=5000 m/s?", o:["50 MHz", "500 MHz", "50.000.000 MHz", "50 kHz"], r:0}
+];
+
+let questoesAtuais = [];
+let indexAtual = 0;
+let respostasUsuario = [];
+
+function iniciarSimulado(tipo) {
+    const escolha = document.getElementById('escolhaProva').value;
+    
+    if (tipo === 'total') {
+        questoesAtuais = [...bancoQuestoes];
+    } else if (tipo === 'especifica') {
+        questoesAtuais = bancoQuestoes.filter(q => q.p == escolha);
+    } else if (tipo === 'random') {
+        questoesAtuais = [...bancoQuestoes].sort(() => 0.5 - Math.random()).slice(0, 40);
+    }
+
+    if (questoesAtuais.length === 0) {
+        alert("Nenhuma questão encontrada para esta prova!");
+        return;
+    }
+
+    indexAtual = 0;
+    respostasUsuario = new Array(questoesAtuais.length).fill(null);
+    
+    document.getElementById('menu').classList.add('hidden');
+    document.getElementById('quiz').classList.remove('hidden');
+    mostrarQuestao();
+}
+
+function mostrarQuestao() {
+    const q = questoesAtuais[indexAtual];
+    document.getElementById('progresso').innerText = `Questão ${indexAtual + 1} de ${questoesAtuais.length}`;
+    document.getElementById('pergunta').innerText = q.q;
+    
+    let htmlOpcoes = "";
+    q.o.forEach((opt, i) => {
+        const classeSel = respostasUsuario[indexAtual] === i ? 'selected' : '';
+        htmlOpcoes += `<div class="option ${classeSel}" onclick="selecionar(${i})">${opt}</div>`;
+    });
+    document.getElementById('opcoes').innerHTML = htmlOpcoes;
+
+    // Controlar visibilidade dos botões
+    document.getElementById('voltar').style.visibility = indexAtual === 0 ? 'hidden' : 'visible';
+    
+    if (indexAtual === questoesAtuais.length - 1) {
+        document.getElementById('avancar').classList.add('hidden');
+        document.getElementById('finalizar').classList.remove('hidden');
+    } else {
+        document.getElementById('avancar').classList.remove('hidden');
+        document.getElementById('finalizar').classList.add('hidden');
+    }
+}
+
+function selecionar(i) {
+    respostasUsuario[indexAtual] = i;
+    mostrarQuestao();
+}
+
+function mudarQuestao(passo) {
+    indexAtual += passo;
+    mostrarQuestao();
+}
+
+function verResultado() {
+    document.getElementById('quiz').classList.add('hidden');
+    document.getElementById('resultado').classList.remove('hidden');
+    
+    let acertos = 0;
+    let html = "";
+    questoesAtuais.forEach((q, i) => {
+        const correta = q.r;
+        const user = respostasUsuario[i];
+        const acertou = user === correta;
+        if(acertou) acertos++;
+
+        html += `<div class="result-card">
+            <p><strong>${i+1}. ${q.q}</strong></p>
+            <p>Sua resposta: <span class="${acertou ? 'correct' : 'wrong'}">${user !== null ? q.o[user] : 'Não respondida'}</span></p>
+            ${!acertou ? `<p>Resposta correta: <span class="correct">${q.o[correta]}</span></p>` : ''}
+        </div>`;
+    });
+
+    document.getElementById('placar').innerText = `Resultado: ${acertos} de ${questoesAtuais.length}`;
+    document.getElementById('detalhes').innerHTML = html;
+}
+</script>
+<footer style="text-align: center; padding: 20px; font-family: sans-serif; color: #555;">
+    <p>Simulado de Ultrassom &copy; 2026</p>
+    <p><strong>Desenvolvido por: Douglas Djands - Mergulhando Profissional</strong></p>
+</footer>
 </body>
 </html>
