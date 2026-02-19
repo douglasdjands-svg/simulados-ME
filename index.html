@@ -14,13 +14,15 @@
         .option { background: #f9f9f9; border: 2px solid #eee; padding: 12px; margin: 8px 0; border-radius: 8px; cursor: pointer; transition: 0.2s; }
         .option:hover { background: #eef2f3; border-color: #3498db; }
         .selected { background: #d6eaf8 !important; border-color: #3498db !important; }
-        .nav-btns { display: flex; justify-content: space-between; margin-top: 25px; }
+        .nav-btns { display: flex; justify-content: space-between; margin-top: 25px; flex-wrap: wrap; gap: 10px; }
         button { padding: 10px 25px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; }
         .btn-prev { background: #95a5a6; color: white; }
         .btn-next { background: #27ae60; color: white; }
+        .btn-exit { background: #e74c3c; color: white; } /* Botão de Sair */
         .correct { color: #27ae60; font-weight: bold; }
         .wrong { color: #e74c3c; font-weight: bold; text-decoration: line-through; }
         .result-card { border-bottom: 1px solid #ddd; padding: 15px 0; }
+        footer { text-align: center; margin-top: 20px; font-size: 12px; color: #7f8c8d; }
     </style>
 </head>
 <body>
@@ -43,7 +45,7 @@
             <option value="10">Prova 10</option>
             <option value="11">Prova 11</option>
             <option value="12">Prova 12</option>
-            </select>
+        </select>
         <button class="btn-menu" style="width: auto; display: inline-block; margin-left: 10px; padding: 8px 20px;" onclick="iniciarSimulado('especifica')">Iniciar</button>
     </div>
     <button class="btn-menu" onclick="iniciarSimulado('random')">3 - 40 Questões Aleatórias</button>
@@ -54,19 +56,31 @@
     <div id="pergunta" style="font-size: 18px; margin-bottom: 20px; font-weight: 500;"></div>
     <div id="opcoes"></div>
     <div class="nav-btns">
-        <button class="btn-prev" id="voltar" onclick="mudarQuestao(-1)">Voltar</button>
-        <button class="btn-next" id="avancar" onclick="mudarQuestao(1)">Avançar</button>
-        <button class="btn-next hidden" id="finalizar" onclick="verResultado()">Finalizar Simulado</button>
+        <button class="btn-exit" onclick="voltarAoMenu()">Sair</button>
+        <div>
+            <button class="btn-prev" id="voltar" onclick="mudarQuestao(-1)">Anterior</button>
+            <button class="btn-next" id="avancar" onclick="mudarQuestao(1)">Avançar</button>
+            <button class="btn-next hidden" id="finalizar" onclick="verResultado()">Finalizar</button>
+        </div>
     </div>
 </div>
 
 <div id="resultado" class="container hidden">
     <h2 id="placar" style="text-align: center;"></h2>
     <div id="detalhes"></div>
-    <button class="btn-menu" onclick="location.reload()">Reiniciar</button>
+    <button class="btn-menu" onclick="voltarAoMenu()">Voltar ao Menu Principal</button>
 </div>
 
+<footer>
+    Desenvolvido por Douglas Djands Mergulhando Profissional
+</footer>
+
 <script>
+// Variáveis de controle do simulado
+let questoesAtuais = [];
+let indiceQuestao = 0;
+let respostasUsuario = {};
+
 const bancoQuestoes = [ 
     // PROVA 01 
     {p:1, q:"1)- O cabo que conecta o aparelho de ultrassom ao cabeçote é especialmente projetado de forma que um condutor seja perfeitamente centrado dentro de outro condutor. O nome tecnicamente correto deste cabo é:", o:["Cabo BX", "Conduite", "Cabo condutor ultrassônico grau 20", "Cabo coaxial"], r:3},
@@ -83,12 +97,12 @@ const bancoQuestoes = [
     {p:1, q:"12)- Outra maneira de dizer 25 milhões de ciclos é:", o:["25 quilociclos", "2.500 quilociclos", "25 microciclos", "25 megaciclos"], r:3},
     {p:1, q:"13)- O termo usado em ultrassom para expressar a velocidade com que as ondas de sons passam através de várias substâncias é:", o:["Frequência", "Comprimento de onda", "Velocidade", "Nenhuma das respostas acima está certa"], r:2},
     {p:1, q:"14)- A técnica na qual o feixe de vibrações emitido pelo cristal faz um ângulo com a superfície da peça em exame é denominada:", o:["Técnica de imersão", "Exame por contato", "Exame por transferência", "Exame por meio de ultrassom utilizando cabeçote angular"], r:3},
-    {p:1, q:"15)- O ângulo marcado num cabeçote angular corresponde à direção da propagação do feixe que faz com a normal à superfície de uma peça de:", o:["Normal oblíqua", "Normal à superfície", "Plano da superfície", "Aço"], r:3},
-    {p:1, q:"16)- O ponto de emissão de um certo cabeçote angular:", o:["Depende do material da peça", "Não se altera com o uso", "Pode ser modificado", "Varia de acordo com o desgaste da sapata"], r:3},
+    {p:1, q:"15)- O ângulo marcado num cabeçote angular corresponde:", o:["Que a direção de propagação do feixe de ondas ultrassônicas emitindo pelo cabeçote faz com a normal oblíqua a superfície da peça por onde é feito o exame", "Do eixo do cabeçote com a normal a superfície", "Do eixo do cabeçote com plano da superfície", "Que a direção da propagação do feixe de ondas ultrassônicas emitindo pelo cabeçote faz com a normal à superfície por onde é feito o exame de uma peça de aço"], r:3},
+    {p:1, q:"16)- O ponto de emissão de um certo cabeçote angular:", o:["Depende do material da peça em exame", "Não se altera com o uso do cabeçote", "Pode ser modificado para reduzir a atenuação das ondas ultrassônicas", "Varia de acordo com o desgaste da sapata"], r:3},
     {p:1, q:"17)- A maioria dos exames por meio de ultrassom é feito na Frequência de:", o:["De 1 a 25 quilociclos", "De 1 a 1.000 quilociclos", "De 15 a 100 megaciclos", "De 1 a 25 megaciclos"], r:3},
     {p:1, q:"18)- Indique a frequência que proporciona a melhor penetração numa peça de aço, com granulação grosseira, com espessura de 30 mm:", o:["2,25 megahertz", "5,0 megahertz", "10 mc", "1,0 megahertz"], r:3},
-    {p:1, q:"19)- Um aparelho utilizando cabeçote normal em uma chapa plana detectará:", o:["Defeitos transversais", "Defeitos longitudinais", "Defeitos laminares, planos, paralelos à superfície", "Nenhum dos defeitos citados"], r:2},
-    {p:1, q:"20)- No exame de ultrassom, o uso de acoplante se faz necessário porque:", o:["Serve como lubrificante", "O cristal não vibraria", "Fecha o circuito elétrico", "O ar na interface refletiria quase todo feixe sônico"], r:3},
+    {p:1, q:"19)- Um aparelho para exame por meio de ultrasson, utilizando cabeçote normal, é usado para examinaruma peça que consiste em uma chapa plana. este exame detectará:", o:["Defeitos transversais, planos, perperndiculares à superfície da chapa", "Defeitos longitudinais, planos,perpendiculares à superfície da chapa", "Defeitos laminares, planos, paralelos à superfície", "Nenhum dos defeitos citados"], r:2},
+    {p:1, q:"20)- No exame por meio de ultrassom, o uso de acoplante entre o cabeçote e a superfície da peça em exame se faz necessário porque:", o:["Serve como lubrificante para minimizar o desgaste do cabeçote", "O cristal do cabeçote não vibrará se este for colocado diretamente sobre a peça", "O acoplante é necessário para fechar o circuito elétrico do cabeçote", "Caso não seja usado, o ar existente na interface entre o cabeçote e a superfície da peça, refletirá quase todo feixe sônico, permitindo que apenas uma pequena quantidade de energia ultrassônica gerada no cabeçote seja tramsmitida para a peça impedindo praticamente a realização do exame"], r:3},
     {p:1, q:"21)- Qual dos seguintes tipos de ondas se propaga com maior velocidade:", o:["Ondas de corte", "Ondas transversais", "Ondas superficiais", "Ondas Longitudinais"], r:3},
     {p:1, q:"22)- Ondas com frequência superior à máxima captada pelo ouvido humano são superiores a:", o:["2 megaciclos/s", "2 hilociclos/s", "200 kilociclos/s", "20.000 ciclos por segundo"], r:3},
     {p:1, q:"23)- Fundamentalmente, a velocidade das ondas de som depende:", o:["Da duração do pulso", "Da Frequência", "Do material e do tipo de ondas", "Nenhum dos fatores citados"], r:2},
@@ -108,7 +122,7 @@ const bancoQuestoes = [
     {p:1, q:"37)- Uma Frequência de 100.000 ciclos por segundo também é:", o:["10 quilociclos", "100 megaciclos", "0,1 quilociclos", "100 quilociclos"], r:3},
     {p:1, q:"38)- A perda gradual de energia sônica à medida que o feixe se propaga é:", o:["Reflexão", "Refração", "Reprodutibilidade", "Atenuação"], r:3},
     {p:1, q:"39)- Termo aplicado a trincas, inclusão, porosidade etc.:", o:["Dispersador", "Atenuador", "Refrator", "Descontinuidade"], r:3},
-    {p:1, q:"40)- Uma descontinuidade não produzirá indicação na tela se for usado o exame:", o:["Cabeçote normal", "Ondas superficiais", "Cabeçote angular", "Pelo método de transparência"], r:3}
+    {p:1, q:"40)- Uma descontinuidade não produzirá indicação na tela se for usado o exame:", o:["Cabeçote normal", "Ondas superficiais", "Cabeçote angular", "Pelo método de transparência"], r:3},
    
     // PROVA 02 
     {p:2, q:"01)- Indique qual é a frequência da onda ultrassônica que perde mais energia ao propagar-se numa peça metálica de granulação grosseira:", o:["1,0 megaciclos.", "10,0 megaciclos.", "5,0 megaciclos.", "2,25 megaciclos."], r:1},
@@ -130,8 +144,8 @@ const bancoQuestoes = [
     {p:2, q:"17)- Um método de exame no qual o som é emitido para a peça por um cabeçote e recebido por outro situado na superfície oposta é denominado:", o:["exame com ondas superficiais.", "exame com cabeçote angular.", "exame com cabeçote normal.", "exame por transparência."], r:3},
     {p:2, q:"18)- Um dispositivo que transforma energia de uma forma em outra é denominado:", o:["emissor.", "transferidor.", "transmissor.", "transdutor."], r:3},
     {p:2, q:"19)- A distância de um certo ponto de uma onda ultrassônica ao ponto correspondente da onda seguinte é denominado:", o:["frequência.", "velocidade.", "duração do pulso.", "comprimento de onda."], r:3},
-    {p:2, q:"20)- Ao deslocar-se num material, uma onda ultrassônica percorre uma certa distância na unidade de tempo e a isto denominamos:", o:["taxa de repetição do pulso.", "taxa de recuperação do pulso.", "resposta ultrassônica.", "velocidade."], r:3},
-    {p:2, q:"21) Qual dos seguintes modos de vibração possui geralmente o maior poder de penetração, com frequência iguais, em peças metálicas de granulação grosseira?", o:["Longitudinal.", "Transversal.", "Todas as citadas têm o mesmo poder de penetração.", "De corte."], r:0},
+    {p:2, q:"20)- Ao deslocar-se num material, uma onda ultrassônica percorre uma certa distância na unidade de tempo e a isto denominamos:", o:["taxa de repetição do pulso.", "taxa de recuperação do pulso.", "resposta ultrassônica.", "velocidade."], r:3}
+ {p:2, q:"21) Qual dos seguintes modos de vibração possui geralmente o maior poder de penetração, com frequência iguais, em peças metálicas de granulação grosseira?", o:["Longitudinal.", "Transversal.", "Todas as citadas têm o mesmo poder de penetração.", "De corte."], r:0},
     {p:2, q:"22) Vários feixes de ondas ultrassônicas percorrem uma peça metálica. Indique a frequência do feixe que provavelmente sofre a maior atenuação:", o:["1,0 Megahertz.", "2,25 Megahertz.", "10 Megahertz.", "25 Megahertz."], r:3},
     {p:2, q:"23) O princípio da ressonância ultrassônica é geralmente usado para :", o:["Medir a espessura da parede.", "Detectar porosidade.", "Nenhuma das respostas citadas está certa.", "Detectar grandes descontinuidades."], r:0},
     {p:2, q:"24) Um método de exame no qual o som é emitido por um cabeçote e recebido por outro cabeçote, situado na superfície oposta é denominado:", o:["Exame com ondas superficiais.", "Exame por transparência.", "Exame com cabeçote normal.", "Exame com cabeçote angular."], r:1},
@@ -150,7 +164,7 @@ const bancoQuestoes = [
     {p:2, q:"37) Indique a frequência que proporciona a melhor penetração numa peça de aço, com granulação grosseira, com espessura de 300 mm:", o:["2,25 Megahertz.", "5,0 Megahertz.", "1,0 Megahertz.", "10 megaciclos/s."], r:2},
     {p:2, q:"38) O material usado entre a face do cabeçote e a superfície em exame para melhorar a transmissão das ondas ultrassônicas é denominado:", o:["Acoplante.", "Transmissor acústico.", "Lubrificante.", "Agente umedecedor."], r:0},
     {p:2, q:"39) O método de exame que emprega dois cabeçotes, trabalhando em superfícies opostas da peça em exame, é denominado:", o:["Método de exame por transparência.", "Exame com ondas superficiais.", "Exame com ondas de Lamb.", "Exame por contato."], r:0},
-    {p:2, q:"40) O número de ondas completas que passam num determinado ponto na unidade de tempo é denominado:", o:["Frequência do movimento ondulatório.", "Duração de um pulso.", "Comprimento de onda.", "Amplitude do movimento ondulatório."], r:0}
+    {p:2, q:"40) O número de ondas completas que passam num determinado ponto na unidade de tempo é denominado:", o:["Frequência do movimento ondulatório.", "Duração de um pulso.", "Comprimento de onda.", "Amplitude do movimento ondulatório."], r:0},
     
     // PROVA 03 
     {p:3, q:"01) O método de exame no qual a peça não está em contato com o cabeçote, sendo separada deste por uma camada de água ou por outro líquido de acoplamento é denominado:", o:["Exame por contato.", "Exame com ondas superficiais.", "Exame por imersão.", "Método de inspeção por transparência."], r:2},
@@ -192,7 +206,7 @@ const bancoQuestoes = [
     {p:3, q:"37) O processo para comparar um instrumento com um padrão é denominado:", o:["Angulação.", "Atenuação.", "Calibração.", "Correlação."], r:2},
     {p:3, q:"38) Onda de 4 MHz no aço (6000 m/s) terá comprimento de onda de:", o:["2 mm.", "1,5 mm.", "4 mm.", "3 mm."], r:1},
     {p:3, q:"39) A inclinação da superfície refletora com relação à superfície da peça é:", o:["Ângulo de incidência.", "Ângulo de refração.", "A orientação da descontinuidade.", "Nenhuma das respostas está correta."], r:2},
-    {p:3, q:"40) No exame por contato, a indicação da superfície onde o cabeçote se apoia é:", o:["Ruído.", "Ganho.", "Pico inicial.", "Nenhuma das respostas está correta."], r:2}
+    {p:3, q:"40) No exame por contato, a indicação da superfície onde o cabeçote se apoia é:", o:["Ruído.", "Ganho.", "Pico inicial.", "Nenhuma das respostas está correta."], r:2},
 
     // PROVA 04 
     {p:4, q:"01) O ângulo de incidência é .......... ângulo de reflexão.", o:["Igual ao.", "Menor que o.", "Nenhuma das respostas está correta.", "Maior do que o."], r:0},
@@ -234,7 +248,7 @@ const bancoQuestoes = [
     {p:4, q:"37) Aplicação comum de ondas transversais:", o:["Propriedades elásticas.", "Laminares em chapas grossas.", "Detecção em soldas.", "Espessura em chapas finas."], r:2},
     {p:4, q:"38) Interface água-aço, ângulo de incidência 7°. Modo principal no aço:", o:["Longitudinal e transversal.", "Transversal.", "Ondas superficiais.", "Longitudinal."], r:0},
     {p:4, q:"39) Antes de examinar forjado com carepa aderente é necessário:", o:["Remover óxido completamente.", "Primeira usinagem.", "Limpar carepa frouxa.", "Decapar a superfície."], r:2},
-    {p:4, q:"40) Interface alumínio-água, o ângulo de reflexão:", o:["É igual ao ângulo de incidência.", "Quatro vezes maior.", "0,256 vezes.", "Metade do ângulo."], r:0}
+    {p:4, q:"40) Interface alumínio-água, o ângulo de reflexão:", o:["É igual ao ângulo de incidência.", "Quatro vezes maior.", "0,256 vezes.", "Metade do ângulo."], r:0},
 
     // PROVA 05 
     {p:5, q:"01) A distância de um certo ponto de uma onda ultrassônica ao ponto correspondente da onda seguinte é denominada:", o:["Frequência.", "Velocidade.", "Comprimento de onda.", "Duração de pulso."], r:2},
@@ -276,7 +290,7 @@ const bancoQuestoes = [
     {p:5, q:"37) Na inspeção de fundidos, é recomendado o uso de transdutores:", o:["maior diâmetro possível.", "maior Frequência possível.", "menor diâmetro.", "menor Frequência."], r:3},
     {p:5, q:"38) Um transdutor com baixa Frequência (0,5 MHz) é utilizado em:", o:["chapas laminadas.", "inspeção de fundidos.", "soldas em inox.", "tubos por imersão."], r:1},
     {p:5, q:"39) A impedância acústica pode ser avaliada através da fórmula:", o:["densidade x velocidade.", "velocidade x elasticidade.", "densidade x atenuação.", "velocidade / densidade."], r:0},
-    {p:5, q:"40) Qual acoplante seria melhor e mais prático para inspeção de aços laminados:", o:["óleo diesel.", "glicerina.", "metil celulose.", "água"], r:1}
+    {p:5, q:"40) Qual acoplante seria melhor e mais prático para inspeção de aços laminados:", o:["óleo diesel.", "glicerina.", "metil celulose.", "água"], r:1},
 
     // PROVA 06 
     {p:6, q:"01) Uma característica da propagação da vibração acústica nos meios líquidos é que:", o:["somente se propagam as ondas longitudinais.", "podem se propagar quaisquer tipos de vibrações.", "velocidade é muito maior que nos metálicos.", "vibrações são fortemente atenuadas."], r:0},
@@ -318,7 +332,7 @@ const bancoQuestoes = [
     {p:6, q:"37) O tipo de onda transversal é gerado por transdutores:", o:["angulares.", "normais.", "bi-focais.", "de banda larga."], r:0},
     {p:6, q:"38) Cabeçotes com cristal em cunha plástica para contato são usados para:", o:["Exames com feixe em ângulo.", "Técnica de imersão.", "Nenhuma das respostas.", "Exames com feixe normal."], r:0},
     {p:6, q:"39) A fórmula senA/velA = senB/velB é denominada:", o:["razão da impedância.", "conversão de fase.", "zona de Fresnel.", "Lei de Snell."], r:3},
-    {p:6, q:"40) A divergência do feixe aumenta se:", o:["a frequência ou o diâmetro diminuem.", "a frequência ou o diâmetro aumentam.", "a frequência aumenta.", "o diâmetro aumenta."], r:0}
+    {p:6, q:"40) A divergência do feixe aumenta se:", o:["a frequência ou o diâmetro diminuem.", "a frequência ou o diâmetro aumentam.", "a frequência aumenta.", "o diâmetro aumenta."], r:0},
 
     // PROVA 07 
     {p:7, q:"01) Indique a frequência do cabeçote que possui o cristal de quartzo de menor espessura.", o:["25 megaciclos", "15 megaciclos", "5 megaciclos", "1 megaciclo"], r:0},
@@ -360,7 +374,7 @@ const bancoQuestoes = [
     {p:7, q:"37) O espalhamento do feixe causado por reflexão em superfície altamente irregular é:", o:["Angulação", "Dispersão", "Refração", "Rarefação"], r:1},
     {p:7, q:"38) O ângulo de reflexão:", o:["É igual ao ângulo de refração", "É igual ao ângulo de incidência", "Depende da frequência", "Depende do acoplamento"], r:1},
     {p:7, q:"39) A inclinação da superfície refletora em relação à superfície de exame é:", o:["Ângulo de incidência", "Ângulo de refração", "A orientação da descontinuidade", "Nenhuma das respostas."], r:2},
-    {p:7, q:"40) Um fluxo de curta duração e intenso de energia elétrica alternada é um:", o:["Pulso", "Onda contínua", "Onda ultrassônica", "Pico de voltagem CC"], r:0}
+    {p:7, q:"40) Um fluxo de curta duração e intenso de energia elétrica alternada é um:", o:["Pulso", "Onda contínua", "Onda ultrassônica", "Pico de voltagem CC"], r:0},
 
     // PROVA 08 
     {p:8, q:"01) No exame por meio de ultrassom, a duração de um pulso é denominada:", o:["Forma do pulso", "Amplitude do pulso", "Comprimento do pulso ou largura do pulso", "Nenhuma das respostas está correta"], r:2},
@@ -402,7 +416,7 @@ const bancoQuestoes = [
     {p:8, q:"37) Componente que coordena as ações dos demais componentes e o tempo:", o:["Circuito marcador", "Receptor", "Sincronizador (relógio)", "Tubo de raios catódicos"], r:2},
     {p:8, q:"38) Componente que produz a voltagem que ativa o cabeçote:", o:["Amplificador", "Receptor", "Sincronizador", "Pulsador"], r:3},
     {p:8, q:"39) Ângulo de refração do feixe inclinado da água para o metal será função:", o:["Impedâncias acústicas", "Frequência das ondas", "Velocidades relativas nos dois meios", "Densidades"], r:2},
-    {p:8, q:"40) Componente que produz os sinais na tela usados para medir distâncias:", o:["Sincronizador", "Circuito de varredura", "Circuito marcador (ou de tempo)", "Circuito receptor"], r:2}
+    {p:8, q:"40) Componente que produz os sinais na tela usados para medir distâncias:", o:["Sincronizador", "Circuito de varredura", "Circuito marcador (ou de tempo)", "Circuito receptor"], r:2},
 
     // PROVA 09 
     {p:9, q:"01) A maioria dos aparelhos para exame por meio de ultrassom, do tipo pulso-eco, usa:", o:["Apresentação do tipo A-Scan", "Apresentação do tipo B-Scan", "Apresentação do tipo C-Scan", "Dispositivos de leitura automática."], r:0},
@@ -444,7 +458,7 @@ const bancoQuestoes = [
     {p:9, q:"37) A velocidade acústica é determinada primeiramente por:", o:["Densidade", "Elasticidade", "Impedância acústica", "Densidade e elasticidade"], r:3},
     {p:9, q:"38) A inspeção de fundidos frequentemente é impraticável porque:", o:["Linhas de fluxo uniformes", "Grãos muito finos", "Peças de granulação grosseira", "Defeitos ao acaso"], r:2},
     {p:9, q:"39) A fórmula do ângulo de divergência (alfa) é:", o:["sen α = f x λ", "sen α/2 = 1,22 x λ / D", "sen α = D x 2 / 4λ", "sen α x D = f x λ"], r:1},
-    {p:9, q:"40) O poder de resolução de um cabeçote é diretamente proporcional:", o:["Ao coeficiente elétrico", "À largura de sua faixa (banda)", "À forma convexa", "À forma côncava"], r:1}
+    {p:9, q:"40) O poder de resolução de um cabeçote é diretamente proporcional:", o:["Ao coeficiente elétrico", "À largura de sua faixa (banda)", "À forma convexa", "À forma côncava"], r:1},
 
     // PROVA 10 
     {p:10, q:"01) Quando uma peça a ser examinada possui superfície irregular, é aconselhável empregar:", o:["Cabeçote de frequência menor e acoplantes mais viscosos", "Cabeçotes de frequência menor e acoplantes menos viscosos", "Cabeçote de frequência maior e acoplantes menos viscosos", "Cabeçotes de frequência maior e acoplantes mais viscosos"], r:0},
@@ -486,7 +500,7 @@ const bancoQuestoes = [
     {p:10, q:"37) Um outro nome para zona de Fresnel é:", o:["Zona de Fraunhofer", "Campo próximo", "Campo longínquo", "Zona morta"], r:1},
     {p:10, q:"38) Por que a inspeção de fundidos é difícil?", o:["Estrutura grosseira causa atenuação e ruído", "Requer dois transdutores", "Defeitos são pequenos demais", "Blocos são pesados"], r:0},
     {p:10, q:"39) Habilidade em detectar ecos de pequenas descontinuidades é a:", o:["Resolução", "Sensibilidade", "Definição", "Ganho"], r:1},
-    {p:10, q:"40) Em qual zona a densidade de energia é mais intensa e causa interferência?", o:["Campo longínquo", "Campo próximo", "Zona morta", "Zona de Snell"], r:1}
+    {p:10, q:"40) Em qual zona a densidade de energia é mais intensa e causa interferência?", o:["Campo longínquo", "Campo próximo", "Zona morta", "Zona de Snell"], r:1},
 
     // PROVA 11 
     {p:11, q:"01) A velocidade do som nos materiais é primeiramente dependente:", o:["Do comprimento do pulso sônico", "Da frequência", "Do material e do modo de vibração", "Nenhuma das alternativas"], r:2},
@@ -528,7 +542,7 @@ const bancoQuestoes = [
     {p:11, q:"37) Uma pequena explosão de energia elétrica alternada é chamada:", o:["Onda contínua", "Tensão contínua", "Onda ultrassônica", "Pulso"], r:3},
     {p:11, q:"38) Onda que atinge limite e altera a direção dentro do mesmo meio é a:", o:["Divergência", "Impedância", "Angulação", "Reflexão"], r:3},
     {p:11, q:"39) Estabilidade, insolubilidade e resistência ao envelhecimento são vantagens do:", o:["Sulfato de lítio", "Titanato de bário", "Quartzo", "Sais de Rochelle"], r:2},
-    {p:11, q:"40) Substância que reduz a tensão superficial de um líquido é um:", o:["Acoplamento", "Amortecedor", "Agente umectante", "Solvente"], r:2}
+    {p:11, q:"40) Substância que reduz a tensão superficial de um líquido é um:", o:["Acoplamento", "Amortecedor", "Agente umectante", "Solvente"], r:2},
     
     // PROVA 12 
     {p:12, q:"01) Indique a frequência que sofre a MENOR atenuação ao se propagar no aço:", o:["2,0 MHz", "0,5 MHz", "18 MHz", "6 MHz"], r:1},
@@ -570,53 +584,51 @@ const bancoQuestoes = [
     {p:12, q:"37) A atenuação de energia sônica depende:", o:["Do percurso sônico", "Da granulação", "Da frequência", "Todas as anteriores"], r:3},
     {p:12, q:"38) Qual material é o MELHOR condutor de energia ultrassônica?", o:["Ferro fundido nodular", "Aço inox fundido", "Aço carbono forjado", "Ferro fundido cinzento"], r:2},
     {p:12, q:"39) Qual das afirmativas abaixo é verdadeira?", o:["Frequência é inversamente proporcional à espessura do cristal", "Impedância é inv. proporcional à densidade", "Impedância é inv. proporcional à velocidade", "Frequência é diretamente proporcional à espessura"], r:0},
-    {p:12, q:"40) Frequência para λ=0,1mm com V=5000 m/s?", o:["50 MHz", "500 MHz", "50.000.000 MHz", "50 kHz"], r:0}
+    {p:12, q:"40) Frequência para λ=0,1mm com V=5000 m/s?", o:["50 MHz", "500 MHz", "50.000.000 MHz", "50 kHz"], r:0}   
 ];
 
-let questoesAtuais = [];
-let indexAtual = 0;
-let respostasUsuario = [];
-
 function iniciarSimulado(tipo) {
-    const escolha = document.getElementById('escolhaProva').value;
-    
     if (tipo === 'total') {
         questoesAtuais = [...bancoQuestoes];
     } else if (tipo === 'especifica') {
-        questoesAtuais = bancoQuestoes.filter(q => q.p == escolha);
+        const p = document.getElementById('escolhaProva').value;
+        questoesAtuais = bancoQuestoes.filter(q => q.p == p);
     } else if (tipo === 'random') {
         questoesAtuais = [...bancoQuestoes].sort(() => 0.5 - Math.random()).slice(0, 40);
     }
 
     if (questoesAtuais.length === 0) {
-        alert("Nenhuma questão encontrada para esta prova!");
+        alert("Nenhuma questão encontrada!");
         return;
     }
 
-    indexAtual = 0;
-    respostasUsuario = new Array(questoesAtuais.length).fill(null);
-    
+    indiceQuestao = 0;
+    respostasUsuario = {};
     document.getElementById('menu').classList.add('hidden');
     document.getElementById('quiz').classList.remove('hidden');
+    document.getElementById('resultado').classList.add('hidden');
     mostrarQuestao();
 }
 
 function mostrarQuestao() {
-    const q = questoesAtuais[indexAtual];
-    document.getElementById('progresso').innerText = `Questão ${indexAtual + 1} de ${questoesAtuais.length}`;
+    const q = questoesAtuais[indiceQuestao];
+    document.getElementById('progresso').innerText = `Questão ${indiceQuestao + 1} de ${questoesAtuais.length}`;
     document.getElementById('pergunta').innerText = q.q;
     
-    let htmlOpcoes = "";
-    q.o.forEach((opt, i) => {
-        const classeSel = respostasUsuario[indexAtual] === i ? 'selected' : '';
-        htmlOpcoes += `<div class="option ${classeSel}" onclick="selecionar(${i})">${opt}</div>`;
-    });
-    document.getElementById('opcoes').innerHTML = htmlOpcoes;
-
-    // Controlar visibilidade dos botões
-    document.getElementById('voltar').style.visibility = indexAtual === 0 ? 'hidden' : 'visible';
+    const divOpcoes = document.getElementById('opcoes');
+    divOpcoes.innerHTML = '';
     
-    if (indexAtual === questoesAtuais.length - 1) {
+    q.o.forEach((opt, i) => {
+        const div = document.createElement('div');
+        div.className = 'option' + (respostasUsuario[indiceQuestao] === i ? ' selected' : '');
+        div.innerText = opt;
+        div.onclick = () => selecionarOpcao(i);
+        divOpcoes.appendChild(div);
+    });
+
+    document.getElementById('voltar').style.visibility = indiceQuestao === 0 ? 'hidden' : 'visible';
+    
+    if (indiceQuestao === questoesAtuais.length - 1) {
         document.getElementById('avancar').classList.add('hidden');
         document.getElementById('finalizar').classList.remove('hidden');
     } else {
@@ -625,13 +637,13 @@ function mostrarQuestao() {
     }
 }
 
-function selecionar(i) {
-    respostasUsuario[indexAtual] = i;
+function selecionarOpcao(i) {
+    respostasUsuario[indiceQuestao] = i;
     mostrarQuestao();
 }
 
-function mudarQuestao(passo) {
-    indexAtual += passo;
+function mudarQuestao(dir) {
+    indiceQuestao += dir;
     mostrarQuestao();
 }
 
@@ -640,27 +652,44 @@ function verResultado() {
     document.getElementById('resultado').classList.remove('hidden');
     
     let acertos = 0;
-    let html = "";
-    questoesAtuais.forEach((q, i) => {
-        const correta = q.r;
-        const user = respostasUsuario[i];
-        const acertou = user === correta;
-        if(acertou) acertos++;
+    const detalhes = document.getElementById('detalhes');
+    detalhes.innerHTML = '';
 
-        html += `<div class="result-card">
-            <p><strong>${i+1}. ${q.q}</strong></p>
-            <p>Sua resposta: <span class="${acertou ? 'correct' : 'wrong'}">${user !== null ? q.o[user] : 'Não respondida'}</span></p>
-            ${!acertou ? `<p>Resposta correta: <span class="correct">${q.o[correta]}</span></p>` : ''}
-        </div>`;
+    questoesAtuais.forEach((q, i) => {
+        const card = document.createElement('div');
+        card.className = 'result-card';
+        const correta = q.r;
+        const respUser = respostasUsuario[i];
+        
+        if (correta === respUser) acertos++;
+
+        card.innerHTML = `
+            <p><strong>${i+1}) ${q.q}</strong></p>
+            <p>Sua resposta: <span class="${correta === respUser ? 'correct' : 'wrong'}">${respUser !== undefined ? q.o[respUser] : 'Não respondida'}</span></p>
+            ${correta !== respUser ? `<p>Resposta correta: <span class="correct">${q.o[correta]}</span></p>` : ''}
+        `;
+        detalhes.appendChild(card);
     });
 
-    document.getElementById('placar').innerText = `Resultado: ${acertos} de ${questoesAtuais.length}`;
-    document.getElementById('detalhes').innerHTML = html;
+    const percentual = ((acertos / questoesAtuais.length) * 100).toFixed(1);
+    document.getElementById('placar').innerText = `Resultado: ${acertos} de ${questoesAtuais.length} (${percentual}%)`;
+}
+
+// FUNÇÃO DE VOLTAR PARA MENU PRINCIPAL
+function voltarAoMenu() {
+    if (confirm("Deseja realmente sair do simulado atual e voltar ao menu principal? Seu progresso será perdido.")) {
+        // Resetar variáveis
+        indiceQuestao = 0;
+        respostasUsuario = {};
+        questoesAtuais = [];
+        
+        // Alternar telas
+        document.getElementById('menu').classList.remove('hidden');
+        document.getElementById('quiz').classList.add('hidden');
+        document.getElementById('resultado').classList.add('hidden');
+    }
 }
 </script>
-<footer style="text-align: center; padding: 20px; font-family: sans-serif; color: #555;">
-    <p>Simulado de Ultrassom &copy; 2026</p>
-    <p><strong>Desenvolvido por: Douglas Djands - Mergulhando Profissional</strong></p>
-</footer>
+
 </body>
 </html>
